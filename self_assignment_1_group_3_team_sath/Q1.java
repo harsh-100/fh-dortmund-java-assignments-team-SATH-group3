@@ -5,12 +5,14 @@ public class Q1 {
         double sunRadius = sunDiameter/2.0;
         int earthDiameter = 7_600;
         double earthRadius = earthDiameter/2.0;
+
         double earthVolume = (4.0/3.0)*(Math.PI*Math.pow(earthRadius, 3));
         double sunVolume = (4.0/3.0)*(Math.PI*Math.pow(sunRadius, 3));
         double sunToEarthRatio = sunVolume / earthVolume;
         String earthVolumeStr = String.format(" %.3e cubic miles", earthVolume);
         String sunVolumeStr = String.format(" %.3e cubic miles", sunVolume);
         String sunToEarthRatioStr = String.format(" %.3e", sunToEarthRatio);
+
         System.out.println("The volume of the Earth is" + earthVolumeStr + ",\n" +
                 "the volume of the sun is" + sunVolumeStr + ",\n" +
                 "and the ratio of the volume of the Sun to the volume of the Earth is"
