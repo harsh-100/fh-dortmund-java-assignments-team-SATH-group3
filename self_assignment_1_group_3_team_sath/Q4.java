@@ -1,3 +1,5 @@
+//Definition of word : 
+// In my solution, I define words as any sequence of characters separated by whitespace or punctuation. For example, "fortune," is treated as "fortune". I also ignore case when comparing words for sorting.
 public class Q4 {
     public static String[] alphBubbleSort(String[] words) {
         int n = words.length;
