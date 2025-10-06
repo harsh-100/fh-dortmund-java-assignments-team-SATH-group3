@@ -1,8 +1,0 @@
-/**
- * 
- */
-/**
- * 
- */
-module selfAssignment3 {
-}
