@@ -1,31 +1,37 @@
 package tasks;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Queue;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Deque;
 import java.util.Map;
 import java.util.HashMap;
-import industrialProcess.AGV;
+import storage.Order;
 import logging.LogManager;
-
+import storage.Item;
 
 public class TaskManager{
 
-
-    private Queue<Tasks> taskQueue;
-    private List<Tasks> completedTasks;
+    private String taskmanagerId;
+    private Deque<Tasks> taskQueue = new LinkedList<>();
     private Map<String, Tasks> activeTasks;
     private LogManager logManager;
+    private LinkedList<Tasks> completedTasksList;
+    private final static int MAX_COMPLETED_TASKS = 10;
+        private LogManager logManager;
     private final DateTimeFormatter df = DateTimeFormatter.ISO_DATE;
 
-    public TaskManager() {
+    public TaskManager(String id) throws IOException{
+        this.taskmanagerId = id;
         this.taskQueue = new LinkedList<>();
-        this.completedTasks = new ArrayList<>();
         this.activeTasks = new HashMap<>();
+        this.completedTasksList = new LinkedList<>();
+
         try {
             this.logManager = new LogManager("./logs");
         } catch (Exception e) {
@@ -34,73 +40,86 @@ public class TaskManager{
             System.err.println("Warning: could not initialize LogManager: " + e.getMessage());
         }
     }
-
-    public void addTask(Tasks  task) {
-        taskQueue.offer(task);
+    
+    //------------------- GETTERS ------------------------------
+    public String getTaskManagerId(){
+        return taskmanagerId;
     }
 
-    // assign task to the robot 
-
-    public boolean assignTaskToRobot(AGV robot) {
-
-        if (taskQueue.isEmpty()) {
-            return false;
-        }
-        if (!robot.isAvailable()) {
-            return false;
-        }
-        Tasks task = taskQueue.poll();
-        task.setRobotId(robot.getId());
-        task.setStatus(Tasks.TaskStatus.IN_PROGRESS);
-        activeTasks.put(task.getId(), task);
-        // write per-AGV daily log
-        if (logManager != null) {
-            String date = df.format(LocalDate.now());
-            String fileName = String.format("AGV-%s-%s.log", robot.getId(), date);
-            String msg = String.format("[%s] Assigned task %s to AGV %s — status=%s", LocalDateTime.now(), task.getId(), robot.getId(), task.getStatus());
-            logManager.writeLog(fileName, msg);
-        }
-        return true;
-    }
-
-    public void removeTask(String taskId) {
-        Tasks task = activeTasks.remove(taskId);
-
-        if(task != null){
-            task.setStatus(Tasks.TaskStatus.COMPLETED);
-            completedTasks.add(task);
-            // write completion to AGV log
-            if (logManager != null && task.getRobotId() != null) {
-                String date = df.format(LocalDate.now());
-                String fileName = String.format("AGV-%s-%s.log", task.getRobotId(), date);
-                String msg = String.format("[%s] Completed task %s by AGV %s — status=%s", LocalDateTime.now(), task.getId(), task.getRobotId(), task.getStatus());
-                logManager.writeLog(fileName, msg);
-            }
-        }
-    }
-
-
-    // get queue
     public Queue<Tasks> getTaskQueue() {
         return new LinkedList<>(taskQueue);
     }
-
-    // get completed tasks
-    public List<Tasks> getCompletedTasks() {
-        return new ArrayList<>(completedTasks);
-    }
-
     // get active tasks
     public Map<String, Tasks> getActiveTasks() {
         return new HashMap<>(activeTasks);
     }
 
-    // get pending tasks 
+    public LogManager getLogManager() {
+        return logManager;
+    }
+
+    public LinkedList<Tasks> getCompletedTasksList() {
+        return completedTasksList;
+    }
+
+
+    //------------------- METHODS ------------------------------
+
     public List<Tasks> getPendingTasks() {
         return new LinkedList<>(taskQueue);
     }
 
-    // active task count 
+    public void createTasksFromOrders(Order order) throws IOException{
+        //funktio saa parametrinä order objektin jonka se sitten jakaa itemeiksi ja itemeistä tehdään taskeja
+        
+        try {
+            List<Item> items = order.getItems();
+            // StorageUnit storageUnit = new StorageUnit(null, MAX_COMPLETED_TASKS, null);
+
+            for (Item item : items) {
+                Tasks t = new Tasks(LocalDateTime.now().toString(), item);
+                this.addTask(t);
+            }
+        }
+        catch (Exception e){
+            System.err.println(e);
+        }
+    }
+
+    public void addTask(Tasks task) {
+        taskQueue.offer(task);    
+    }
+
+    public Tasks robotGetTask() {
+        Tasks task = taskQueue.poll();
+        return task;
+    }
+
+    public void requeueTask(Tasks task){
+        try {
+            this.taskQueue.addFirst(task);
+        }
+        catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void completeTask(Tasks task) {
+        completedTasksList.add(task);
+
+        try{
+            if (this.completedTasksList.size() > MAX_COMPLETED_TASKS) {
+                this.completedTasksList.removeLast();
+            }
+        }
+        catch (Exception e){
+            System.out.println("Error occured when running completeTask method.");
+        }
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss"));
+        logManager.writeLog("taskmanagerlogs", timestamp + " - Added task " + task.getId() + " to active tasks ");
+    }
+
     public int getActiveTaskCount() {
         return activeTasks.size();
     }
@@ -108,7 +127,6 @@ public class TaskManager{
     public void displayStatus() {
         System.out.println("Active Tasks: " + activeTasks.size());
         System.out.println("Pending Tasks: " + taskQueue.size());
-        System.out.println("Completed Tasks: " + completedTasks.size());
     }
 
 }

@@ -1,15 +1,16 @@
 
 package tasks;
 import java.util.List;
-import utils.Position;
+// import utils.Position;
 import storage.Item;
+import java.awt.Point;
 
 public class Tasks{
 
     private String id;
-    private Position destination;
+    private Point destination;
     private String robotId;
-    private List<Item> items;
+    private Item item;
     public enum TaskStatus {
         PENDING,
         IN_PROGRESS,
@@ -18,11 +19,19 @@ public class Tasks{
     }
     private TaskStatus status;
 
-    public Tasks(String id, Position destination,List<Item>itemsToFetch){
+    public Tasks(String id, Point destination, Item item){
         this.id = id;
         this.destination = destination;
         this.robotId = null;
-        this.items = itemsToFetch;
+        this.item = item;
+        this.status = TaskStatus.PENDING;
+    }
+
+    public Tasks(String id, Item item){
+        this.id = id;
+        this.destination = null;
+        this.robotId = null;
+        this.item = item;
         this.status = TaskStatus.PENDING;
     }
 
@@ -30,7 +39,7 @@ public class Tasks{
         return id;
     }
 
-    public Position getDestination(){
+    public Point getDestination(){
         return destination;
     }
 
@@ -38,8 +47,8 @@ public class Tasks{
         return robotId;
     }
 
-    public List<Item> getItems(){
-        return items;
+    public Item getItems(){
+        return item;
     }
 
     public TaskStatus getStatus(){
@@ -59,6 +68,6 @@ public class Tasks{
 
     @Override
     public String toString(){
-        return "Task ID: " + id + ", Destination: " + destination + ", Robot ID: " + robotId + ", Items: " + items + ", Status: " + status;
+        return "Task ID: " + id + ", Destination: " + destination + ", Robot ID: " + robotId + ", Item: " + item + ", Status: " + status;
     }
 }
