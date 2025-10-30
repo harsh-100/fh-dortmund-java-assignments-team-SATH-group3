@@ -54,8 +54,6 @@ public class LogManager {
                  
         }
     }
-
-
     // Archive log file using byte stream
 
     // We can also done it with Files.copy() method, 
@@ -79,7 +77,6 @@ public class LogManager {
     e.printStackTrace();
 }
     }
-
 
 }
 
