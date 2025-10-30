@@ -2,17 +2,17 @@ package storage;
 
 import java.util.List;
 import java.util.ArrayList;
-import utils.Position;
+import java.awt.Point;
 import exceptions.ExceptionHandler;
 
 public class StorageUnit{
 
     private final String id;
     private double capacity;
-    private Position position;
+    private Point position;
     private List<Item> items;
 
-    public StorageUnit(String id, double capacity , Position position){
+    public StorageUnit(String id, double capacity , Point position){
         this.id = id;
         this.capacity = capacity;
         this.position = position;
@@ -24,7 +24,7 @@ public class StorageUnit{
     public double getCapacity(){
         return capacity;
     }
-    public Position getPosition(){
+    public Point getPosition(){
         return position;
     }
     public List<Item> getItems(){

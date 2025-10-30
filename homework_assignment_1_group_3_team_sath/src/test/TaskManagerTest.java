@@ -109,23 +109,4 @@ public class TaskManagerTest {
 
     }
 
-    static void testToStringContainsInfo() {
-        Order o = new Order("O-5");
-        String s = o.toString();
-        assert s.contains("O-5") : "toString missing id";
-        assert s.contains("Status") || s.contains("Status:") || s.contains("Status") : "toString missing status";
-    }
-
-    public static void main(String[] args) {
-        System.out.println("Starting TaskManager testing");
-        try {
-            run();
-            System.out.println("All TaskManager tests passed successfully");
-        } catch (IOException e) {
-            System.err.println("An IO error occurred during tests: " + e.getMessage());
-            e.printStackTrace();
-        } catch (AssertionError e) {
-            System.err.println("TEST RUN FAILED: " + e.getMessage());
-        }
-    }
 }

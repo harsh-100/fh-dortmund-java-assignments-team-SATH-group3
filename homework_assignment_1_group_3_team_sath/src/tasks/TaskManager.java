@@ -14,6 +14,7 @@ import java.util.HashMap;
 import storage.Order;
 import logging.LogManager;
 import storage.Item;
+import exceptions.ExceptionHandler;
 
 public class TaskManager{
 
@@ -23,7 +24,6 @@ public class TaskManager{
     private LogManager logManager;
     private LinkedList<Tasks> completedTasksList;
     private final static int MAX_COMPLETED_TASKS = 10;
-        private LogManager logManager;
     private final DateTimeFormatter df = DateTimeFormatter.ISO_DATE;
 
     public TaskManager(String id) throws IOException{
@@ -37,7 +37,7 @@ public class TaskManager{
         } catch (Exception e) {
             // If logging cannot be initialized, continue without logging
             this.logManager = null;
-            System.err.println("Warning: could not initialize LogManager: " + e.getMessage());
+            ExceptionHandler.handle(e, "tasks.TaskManager.<init>");
         }
     }
     
@@ -82,7 +82,7 @@ public class TaskManager{
             }
         }
         catch (Exception e){
-            System.err.println(e);
+            ExceptionHandler.handle(e, "tasks.TaskManager.createTasksFromOrders");
         }
     }
 
@@ -100,7 +100,7 @@ public class TaskManager{
             this.taskQueue.addFirst(task);
         }
         catch (Exception e) {
-            System.out.println(e.getMessage());
+            ExceptionHandler.handle(e, "tasks.TaskManager.requeueTask");
         }
     }
 
@@ -113,11 +113,19 @@ public class TaskManager{
             }
         }
         catch (Exception e){
-            System.out.println("Error occured when running completeTask method.");
+            ExceptionHandler.handle(e, "tasks.TaskManager.completeTask.manageCompletedList");
         }
 
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss"));
-        logManager.writeLog("taskmanagerlogs", timestamp + " - Added task " + task.getId() + " to active tasks ");
+        try {
+            if (logManager != null) {
+                logManager.writeLog("taskmanagerlogs", timestamp + " - Added task " + task.getId() + " to active tasks ");
+            } else {
+                ExceptionHandler.handle(new RuntimeException("LogManager unavailable"), "tasks.TaskManager.completeTask.log");
+            }
+        } catch (Exception e) {
+            ExceptionHandler.handle(e, "tasks.TaskManager.completeTask.logWrite");
+        }
     }
 
     public int getActiveTaskCount() {

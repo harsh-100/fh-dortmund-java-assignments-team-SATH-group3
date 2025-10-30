@@ -2,36 +2,31 @@ package test;
 
 public class TestAll {
     public static void main(String[] args) {
-        int failed = 0;
         try {
+            // Run all test groups; each group throws AssertionError on failure
             TestItem.run();
             System.out.println();
-        } catch (AssertionError e) {
-            failed++;
-            System.err.println("TestItem failed: " + e.getMessage());
-        }
 
-        try {
             TestOrder.run();
             System.out.println();
-        } catch (AssertionError e) {
-            failed++;
-            System.err.println("TestOrder failed: " + e.getMessage());
-        }
 
-        try {
             TestStorageUnit.run();
             System.out.println();
-        } catch (AssertionError e) {
-            failed++;
-            System.err.println("TestStorageUnit failed: " + e.getMessage());
-        }
 
-        if (failed == 0) {
-            System.out.println("ALL STORAGE TESTS PASSED");
-        } else {
-            System.err.println(failed + " TEST GROUP(S) FAILED");
+            TaskManagerTest.run();
+            System.out.println();
+
+            TasksTest.run();
+            System.out.println();
+
+            System.out.println("ALL TESTS PASSED");
+        } catch (AssertionError e) {
+            System.err.println("TEST RUN FAILED: " + e.getMessage());
             System.exit(2);
+        } catch (Exception e) {
+            System.err.println("ERROR DURING TESTS: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(3);
         }
     }
 }

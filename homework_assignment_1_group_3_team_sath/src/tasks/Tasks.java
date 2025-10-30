@@ -1,9 +1,11 @@
 
 package tasks;
+
 import java.util.List;
 // import utils.Position;
 import storage.Item;
 import java.awt.Point;
+import exceptions.ExceptionHandler;
 
 public class Tasks{
 
@@ -20,19 +22,37 @@ public class Tasks{
     private TaskStatus status;
 
     public Tasks(String id, Point destination, Item item){
-        this.id = id;
-        this.destination = destination;
-        this.robotId = null;
-        this.item = item;
-        this.status = TaskStatus.PENDING;
+        try {
+            this.id = id;
+            this.destination = destination;
+            this.robotId = null;
+            this.item = item;
+            this.status = TaskStatus.PENDING;
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "tasks.Tasks.<init>");
+            this.id = id == null ? "<unknown>" : id;
+            this.destination = destination;
+            this.robotId = null;
+            this.item = item;
+            this.status = TaskStatus.FAILED;
+        }
     }
 
     public Tasks(String id, Item item){
-        this.id = id;
-        this.destination = null;
-        this.robotId = null;
-        this.item = item;
-        this.status = TaskStatus.PENDING;
+        try {
+            this.id = id;
+            this.destination = null;
+            this.robotId = null;
+            this.item = item;
+            this.status = TaskStatus.PENDING;
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "tasks.Tasks.<init>");
+            this.id = id == null ? "<unknown>" : id;
+            this.destination = null;
+            this.robotId = null;
+            this.item = item;
+            this.status = TaskStatus.FAILED;
+        }
     }
 
     public String getId(){
@@ -56,10 +76,18 @@ public class Tasks{
     }
 
     public void setStatus(TaskStatus status){
-        this.status = status;
+        try {
+            this.status = status;
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "tasks.Tasks.setStatus");
+        }
     }
     public void setRobotId(String robotId){
-        this.robotId = robotId;
+        try {
+            this.robotId = robotId;
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "tasks.Tasks.setRobotId");
+        }
     }
 
     public boolean isComplete(){
