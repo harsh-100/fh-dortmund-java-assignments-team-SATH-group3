@@ -3,6 +3,7 @@ package storage;
 import java.util.List;
 import java.util.ArrayList;
 import utils.Position;
+import exceptions.ExceptionHandler;
 
 public class StorageUnit{
 
@@ -31,15 +32,24 @@ public class StorageUnit{
     }
 
     public boolean addItems(Item item){
-        if( items.size() < capacity){
-            items.add(item);
-            return true;
+        try {
+            if( items.size() < capacity){
+                items.add(item);
+                return true;
+            }
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "storage.StorageUnit.addItems");
         }
         return false;
     }
 
     public boolean removeItems(String itemid){
-        return items.removeIf(i -> i.getId().equals(itemid));
+        try {
+            return items.removeIf(i -> i.getId().equals(itemid));
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "storage.StorageUnit.removeItems");
+            return false;
+        }
     }
 
     public double getRemainingCapacity(){

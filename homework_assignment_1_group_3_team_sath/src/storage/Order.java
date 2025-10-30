@@ -1,6 +1,7 @@
 
 
 package storage;
+import exceptions.ExceptionHandler;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -41,11 +42,19 @@ public class Order{
     }
 
     public void addItem(Item item) {
-        items.add(item);
+        try {
+            items.add(item);
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "storage.Order.addItem");
+        }
     }
 
     public void removeItem(Item item) {
-        items.remove(item);
+        try {
+            items.remove(item);
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "storage.Order.removeItem");
+        }
     }
 
     public void setStatus(Status status) {
