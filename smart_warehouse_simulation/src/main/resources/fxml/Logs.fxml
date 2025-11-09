@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:controller="app.ui.LogsController" xmlns:fx="http://javafx.com/fxml" style="-fx-padding:10">
+    <top>
+        <HBox spacing="8">
+            <Label text="Log file:" />
+            <ComboBox fx:id="logFileCombo" prefWidth="300" />
+            <Button text="Refresh" onAction="#onRefresh" />
+            <CheckBox fx:id="autoRefresh" text="Auto-refresh" />
+        </HBox>
+    </top>
+
+    <center>
+        <SplitPane dividerPositions="0.7">
+            <VBox>
+                <Label text="Tail" style="-fx-font-weight:bold" />
+                <TextArea fx:id="logsArea" prefRowCount="20" editable="false" wrapText="true" />
+            </VBox>
+            <VBox>
+                <Label text="Exceptions" style="-fx-font-weight:bold" />
+                <ListView fx:id="exceptionsList" prefHeight="200" />
+                <Label text="Stacktrace" style="-fx-font-weight:bold" />
+                <TextArea fx:id="stacktraceArea" prefRowCount="10" editable="false" wrapText="true" />
+            </VBox>
+        </SplitPane>
+    </center>
+</BorderPane>
