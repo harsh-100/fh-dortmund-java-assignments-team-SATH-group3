@@ -70,7 +70,19 @@ public class LogManager {
         Path logFilePath = logDir.resolve(fileName);
         try {
             Path parent = logFilePath.getParent();
-            if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
+            if (parent != null) {
+                if (Files.exists(parent) && !Files.isDirectory(parent)) {
+                    // previous code might have created a file where we now expect a directory.
+                    // Move the file aside with a .bak suffix so we can create the directory.
+                    try {
+                        Path backup = parent.resolveSibling(parent.getFileName().toString() + ".bak");
+                        Files.move(parent, backup, StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException ignored) {
+                        // ignore and attempt to create directory; will fail later if not possible
+                    }
+                }
+                if (!Files.exists(parent)) Files.createDirectories(parent);
+            }
             try (BufferedWriter writer = Files.newBufferedWriter(logFilePath, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
                 writer.write(logMessage);
                 writer.newLine();

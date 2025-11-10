@@ -1,5 +1,7 @@
 robots/Robot$1.class
+tasks/TaskManager$TaskListener.class
 robots/Robot$RobotState.class
+app/demo/ScenarioRunner.class
 utils/IGridEntity.class
 exceptions/ExceptionStore.class
 app/ui/InventoryController.class
@@ -9,6 +11,7 @@ logging/LogService.class
 logging/LogManager.class
 exceptions/ExceptionHandler.class
 utils/WarehouseGrid.class
+app/ui/DashboardController$1.class
 tasks/TaskManager.class
 logging/LogManager$LogListener.class
 storage/StorageUnit.class

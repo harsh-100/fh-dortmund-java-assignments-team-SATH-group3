@@ -1,16 +1,20 @@
 package tasks;
+
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Queue;
-import java.util.LinkedList;
 import java.util.List;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Deque;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayList;
+import java.util.Queue;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import storage.Order;
 import logging.LogManager;
 import storage.Item;
@@ -19,19 +23,17 @@ import exceptions.ExceptionHandler;
 public class TaskManager{
 
     private String taskmanagerId;
-    private Deque<Tasks> taskQueue = new LinkedList<>();
-    private Map<String, Tasks> activeTasks;
-    private LogManager logManager;
-    private LinkedList<Tasks> completedTasksList;
-    private final static int MAX_COMPLETED_TASKS = 10;
+    private final ConcurrentLinkedDeque<Tasks> taskQueue = new ConcurrentLinkedDeque<>();
+    private final ConcurrentMap<String, Tasks> activeTasks = new ConcurrentHashMap<>();
+    private logging.LogManager logManager;
+    private final ConcurrentLinkedDeque<Tasks> completedTasksList = new ConcurrentLinkedDeque<>();
+    private final CopyOnWriteArrayList<TaskListener> listeners = new CopyOnWriteArrayList<>();
+    private final AtomicInteger pendingCount = new AtomicInteger(0);
+    private final static int MAX_COMPLETED_TASKS = 1000; // larger buffer for tests
     private final DateTimeFormatter df = DateTimeFormatter.ISO_DATE;
 
     public TaskManager(String id) throws IOException{
         this.taskmanagerId = id;
-        this.taskQueue = new LinkedList<>();
-        this.activeTasks = new HashMap<>();
-        this.completedTasksList = new LinkedList<>();
-
         try {
             this.logManager = logging.LogManager.getInstance("logs");
         } catch (Exception e) {
@@ -40,20 +42,26 @@ public class TaskManager{
             ExceptionHandler.handle(e, "tasks.TaskManager.<init>");
         }
     }
+
+    public interface TaskListener {
+        void onPendingCountChanged(int newPending);
+        void onCompletedCountChanged(int newCompleted);
+    }
+
+    public void addListener(TaskListener l) { listeners.addIfAbsent(l); }
+    public void removeListener(TaskListener l) { listeners.remove(l); }
     
     //------------------- GETTERS ------------------------------
     public String getTaskManagerId(){
         return taskmanagerId;
     }
 
-    public Queue<Tasks> getTaskQueue() {
-        synchronized (taskQueue) {
-            return new LinkedList<>(taskQueue);
-        }
+    public List<Tasks> getTaskQueue() {
+        return new ArrayList<>(taskQueue);
     }
     // get active tasks
     public Map<String, Tasks> getActiveTasks() {
-        return new HashMap<>(activeTasks);
+        return new ConcurrentHashMap<>(activeTasks);
     }
 
     public LogManager getLogManager() {
@@ -62,18 +70,14 @@ public class TaskManager{
 
     public LinkedList<Tasks> getCompletedTasksList() {
         // return a copy to avoid concurrent modification issues in callers
-        synchronized (completedTasksList) {
-            return new LinkedList<>(completedTasksList);
-        }
+        return new LinkedList<>(completedTasksList);
     }
 
 
     //------------------- METHODS ------------------------------
 
     public List<Tasks> getPendingTasks() {
-        synchronized (taskQueue) {
-            return new LinkedList<>(taskQueue);
-        }
+        return new ArrayList<>(taskQueue);
     }
 
     public void createTasksFromOrders(Order order) throws IOException{
@@ -94,22 +98,27 @@ public class TaskManager{
     }
 
     public void addTask(Tasks task) {
-        synchronized (taskQueue) {
-            taskQueue.offer(task);
+        taskQueue.offer(task);
+        int p = pendingCount.incrementAndGet();
+        for (TaskListener l : listeners) {
+            try { l.onPendingCountChanged(p); } catch (Throwable ignore) {}
         }
     }
 
     public Tasks robotGetTask() {
-        synchronized (taskQueue) {
-            return taskQueue.poll();
+        Tasks t = taskQueue.poll();
+        if (t != null) {
+            int p = pendingCount.decrementAndGet();
+            for (TaskListener l : listeners) {
+                try { l.onPendingCountChanged(p); } catch (Throwable ignore) {}
+            }
         }
+        return t;
     }
 
     public void requeueTask(Tasks task){
         try {
-            synchronized (taskQueue) {
-                this.taskQueue.addFirst(task);
-            }
+            this.taskQueue.addFirst(task);
         }
         catch (Exception e) {
             ExceptionHandler.handle(e, "tasks.TaskManager.requeueTask");
@@ -117,11 +126,10 @@ public class TaskManager{
     }
 
     public void completeTask(Tasks task) {
-        completedTasksList.add(task);
-
+        completedTasksList.addLast(task);
         try{
-            if (this.completedTasksList.size() > MAX_COMPLETED_TASKS) {
-                this.completedTasksList.removeLast();
+            while (this.completedTasksList.size() > MAX_COMPLETED_TASKS) {
+                this.completedTasksList.removeFirst();
             }
         }
         catch (Exception e){
@@ -139,6 +147,11 @@ public class TaskManager{
             }
         } catch (Exception e) {
             ExceptionHandler.handle(e, "tasks.TaskManager.completeTask.logWrite");
+        }
+        // notify listeners about completed count
+        int completed = completedTasksList.size();
+        for (TaskListener l : listeners) {
+            try { l.onCompletedCountChanged(completed); } catch (Throwable ignore) {}
         }
     }
 

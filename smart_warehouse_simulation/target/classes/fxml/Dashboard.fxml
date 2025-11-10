@@ -17,6 +17,9 @@
             <Button text="AGV Panel" onAction="#openAGVPanel" />
             <Button text="Inventory" onAction="#openInventory" />
             <Button text="Logs" onAction="#openLogs" />
+            <Button text="Scenario A" onAction="#runScenarioA" />
+            <Button text="Scenario B" onAction="#runScenarioB" />
+            <Button text="Scenario C" onAction="#runScenarioC" />
         </VBox>
     </left>
     <center>

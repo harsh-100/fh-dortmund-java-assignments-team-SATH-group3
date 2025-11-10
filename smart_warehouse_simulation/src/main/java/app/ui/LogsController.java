@@ -65,6 +65,19 @@ public class LogsController {
 
         // initial load
         refreshLogs();
+
+        // register a live log listener so UI can append new lines without polling
+        try {
+            logging.LogManager.getInstance().addListener((fileName, line) -> {
+                String selected = logFileCombo.getSelectionModel().getSelectedItem();
+                if (selected != null && selected.equals(fileName)) {
+                    Platform.runLater(() -> {
+                        logsArea.appendText(line + "\n");
+                    });
+                }
+            });
+        } catch (Throwable ignore) {
+        }
     }
 
     @FXML

@@ -41,6 +41,7 @@ public class DashboardController {
     private TaskManager taskManager;
     private StorageUnit storageUnit;
     private Timeline updater;
+    private boolean taskManagerListenerRegistered = false;
 
     public void setWarehouse(Warehouse warehouse) {
         this.warehouse = warehouse;
@@ -50,6 +51,25 @@ public class DashboardController {
     public void setTaskManager(TaskManager taskManager) {
         this.taskManager = taskManager;
         startPollingIfReady();
+        if (!taskManagerListenerRegistered) {
+            registerTaskManagerListeners();
+            taskManagerListenerRegistered = true;
+        }
+    }
+
+    private void registerTaskManagerListeners() {
+        if (this.taskManager == null) return;
+        this.taskManager.addListener(new TaskManager.TaskListener() {
+            @Override
+            public void onPendingCountChanged(int newPending) {
+                Platform.runLater(() -> pendingTasksLabel.setText("Pending tasks: " + newPending));
+            }
+
+            @Override
+            public void onCompletedCountChanged(int newCompleted) {
+                Platform.runLater(() -> completedTasksLabel.setText("Completed tasks: " + newCompleted));
+            }
+        });
     }
 
     public void setStorageUnit(StorageUnit storageUnit) {
@@ -132,6 +152,27 @@ public class DashboardController {
     @FXML
     private void openLogs() {
         loadIntoContent("/fxml/Logs.fxml");
+    }
+
+    @FXML
+    private void runScenarioA() {
+        if (warehouse != null && taskManager != null) {
+            app.demo.ScenarioRunner.runScenarioA(warehouse, taskManager);
+        }
+    }
+
+    @FXML
+    private void runScenarioB() {
+        if (warehouse != null && taskManager != null) {
+            app.demo.ScenarioRunner.runScenarioB(warehouse, taskManager);
+        }
+    }
+
+    @FXML
+    private void runScenarioC() {
+        if (warehouse != null && taskManager != null) {
+            app.demo.ScenarioRunner.runScenarioC(warehouse, taskManager);
+        }
     }
 
     private void loadIntoContent(String resource) {
