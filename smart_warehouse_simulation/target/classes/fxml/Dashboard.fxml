@@ -16,15 +16,20 @@
             <Button text="Dashboard" onAction="#showDashboard" />
             <Button text="AGV Panel" onAction="#openAGVPanel" />
             <Button text="Inventory" onAction="#openInventory" />
+            <Button text="Tasks" onAction="#openTasks" />
             <Button text="Logs" onAction="#openLogs" />
-            <Button text="Scenario A" onAction="#runScenarioA" />
-            <Button text="Scenario B" onAction="#runScenarioB" />
-            <Button text="Scenario C" onAction="#runScenarioC" />
+            <Button text="Orders" onAction="#openOrders" />
+            <Button text="Storage Units" onAction="#openStorageUnits" />
+            <Button fx:id="flushButton" text="Flush All Data" onAction="#flushAllData" style="-fx-background-color:#f8d7da; -fx-text-fill:#721c24;" />
+            <!-- <Button fx:id="scenarioAButton" text="Scenario A" onAction="#runScenarioA" />
+            <Button fx:id="scenarioBButton" text="Scenario B" onAction="#runScenarioB" />
+            <Button fx:id="scenarioCButton" text="Scenario C" onAction="#runScenarioC" /> -->
         </VBox>
     </left>
     <center>
         <VBox fx:id="contentArea" style="-fx-padding:10" spacing="8">
             <Label fx:id="simStatusLabel" text="Simulation: stopped" />
+            <Label fx:id="scenarioStatusLabel" text="Scenario: idle" />
             <Label fx:id="pendingTasksLabel" text="Pending tasks: 0" />
             <Label fx:id="completedTasksLabel" text="Completed tasks: 0" />
             <Label text="Robots:" style="-fx-font-weight:bold" />

@@ -6,9 +6,11 @@ import tasks.TaskManager;
 import warehouse.Warehouse;
 
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 /**
  * Simple scenario runner that programmatically creates orders/tasks and controls the simulation.
@@ -18,11 +20,15 @@ public class ScenarioRunner {
 
     private static final ScheduledExecutorService SCHED = Executors.newScheduledThreadPool(2);
     private static final Random RAND = new Random();
+    private static final List<ScenarioListener> listeners = new CopyOnWriteArrayList<>();
 
     public static void runScenarioA(Warehouse warehouse, TaskManager tm) {
         // Scenario A: single order, single robot processing
         SCHED.execute(() -> {
             try {
+                String name = "Scenario A";
+                notifyStarted(name);
+
                 Order o = new Order("SCEN-A-" + System.currentTimeMillis());
                 o.addItem(new Item("A1", "Widget-A", 1.2));
                 tm.createTasksFromOrders(o);
@@ -30,7 +36,13 @@ public class ScenarioRunner {
                 if (!warehouse.isSimulationRunning()) warehouse.startSimulation();
 
                 // stop after 8 seconds for demo
-                SCHED.schedule(() -> warehouse.stopSimulation(), 8, TimeUnit.SECONDS);
+                SCHED.schedule(() -> {
+                    try {
+                        warehouse.stopSimulation();
+                    } finally {
+                        notifyFinished(name);
+                    }
+                }, 8, TimeUnit.SECONDS);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -41,6 +53,9 @@ public class ScenarioRunner {
         // Scenario B: multiple orders, multiple robots (stress)
         SCHED.execute(() -> {
             try {
+                String name = "Scenario B";
+                notifyStarted(name);
+
                 for (int i = 0; i < 30; i++) {
                     Order o = new Order("SCEN-B-" + i + "-" + System.currentTimeMillis());
                     int count = 1 + RAND.nextInt(3);
@@ -55,7 +70,13 @@ public class ScenarioRunner {
                 if (!warehouse.isSimulationRunning()) warehouse.startSimulation();
 
                 // Let it run for 12s then stop
-                SCHED.schedule(() -> warehouse.stopSimulation(), 12, TimeUnit.SECONDS);
+                SCHED.schedule(() -> {
+                    try {
+                        warehouse.stopSimulation();
+                    } finally {
+                        notifyFinished(name);
+                    }
+                }, 12, TimeUnit.SECONDS);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -66,6 +87,9 @@ public class ScenarioRunner {
         // Scenario C: drain robot batteries to trigger charging behavior
         SCHED.execute(() -> {
             try {
+                String name = "Scenario C";
+                notifyStarted(name);
+
                 // set robot batteries low to force charging behavior
                 warehouse.getRobots().forEach(r -> r.setBatteryForTest(5.0));
 
@@ -79,11 +103,42 @@ public class ScenarioRunner {
                 if (!warehouse.isSimulationRunning()) warehouse.startSimulation();
 
                 // stop after 15s
-                SCHED.schedule(() -> warehouse.stopSimulation(), 15, TimeUnit.SECONDS);
+                SCHED.schedule(() -> {
+                    try {
+                        warehouse.stopSimulation();
+                    } finally {
+                        notifyFinished(name);
+                    }
+                }, 15, TimeUnit.SECONDS);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         });
+    }
+
+    public static void addListener(ScenarioListener l) {
+        if (l != null) listeners.add(l);
+    }
+
+    public static void removeListener(ScenarioListener l) {
+        if (l != null) listeners.remove(l);
+    }
+
+    private static void notifyStarted(String name) {
+        for (ScenarioListener l : listeners) {
+            try { l.onScenarioStarted(name); } catch (Exception ignored) {}
+        }
+    }
+
+    private static void notifyFinished(String name) {
+        for (ScenarioListener l : listeners) {
+            try { l.onScenarioFinished(name); } catch (Exception ignored) {}
+        }
+    }
+
+    public interface ScenarioListener {
+        void onScenarioStarted(String scenarioName);
+        void onScenarioFinished(String scenarioName);
     }
 
 }

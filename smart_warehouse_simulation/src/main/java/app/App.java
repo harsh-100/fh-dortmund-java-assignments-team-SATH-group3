@@ -37,19 +37,18 @@ public class App extends Application {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Dashboard.fxml"));
             Parent root = loader.load();
 
-            // prepare a sample storage unit and items for the Inventory UI
-            storage.StorageUnit su = new storage.StorageUnit("SU-UI-1", 20, new java.awt.Point(2,2));
-            su.addItems(new storage.Item("I-UI-1", "Widget-UI", 1.0));
-            su.addItems(new storage.Item("I-UI-2", "Gadget-UI", 2.5));
+            // load or create a fixed set of storage units (5 units) and pick the first for initial views
+            app.model.StorageUnitsStore sus = app.model.StorageUnitsStore.getInstance();
+            storage.StorageUnit su = sus.getUnits().isEmpty() ? null : sus.getUnits().get(0);
 
             // inject backend references into controller
             Object controller = loader.getController();
-            if (controller instanceof app.ui.DashboardController) {
-                app.ui.DashboardController dc = (app.ui.DashboardController) controller;
-                dc.setTaskManager(tm);
-                dc.setWarehouse(wh);
-                dc.setStorageUnit(su);
-            }
+                if (controller instanceof app.ui.DashboardController) {
+                    app.ui.DashboardController dc = (app.ui.DashboardController) controller;
+                    dc.setTaskManager(tm);
+                    dc.setWarehouse(wh);
+                    dc.setStorageUnit(su);
+                }
 
             stage.setScene(new Scene(root, 800, 600));
             stage.setTitle("Smart Warehouse Demo");

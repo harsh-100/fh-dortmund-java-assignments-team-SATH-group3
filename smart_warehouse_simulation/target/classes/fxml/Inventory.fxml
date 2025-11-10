@@ -12,6 +12,9 @@
     <Label text="Storage Items:" />
     <ListView fx:id="itemsListView" prefHeight="180" />
 
+    <Label text="Storage Unit:" />
+    <javafx.scene.control.ComboBox fx:id="unitCombo" />
+
     <HBox spacing="8">
         <TextField fx:id="itemIdField" promptText="Item ID" />
         <TextField fx:id="itemNameField" promptText="Item name" />

@@ -1,10 +1,13 @@
 package storage;
+
 import exceptions.ExceptionHandler;
+import java.io.Serializable;
 import java.util.List;
 import java.util.ArrayList;
 
 //This class will represents the Order by the customer
-public class Order{
+public class Order implements Serializable{
+    private static final long serialVersionUID = 1L;
     private String id;
     public enum Status {
         PENDING,

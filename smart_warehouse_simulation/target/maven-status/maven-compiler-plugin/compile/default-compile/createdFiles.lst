@@ -4,7 +4,6 @@ robots/Robot$RobotState.class
 app/demo/ScenarioRunner.class
 utils/IGridEntity.class
 exceptions/ExceptionStore.class
-app/ui/InventoryController.class
 storage/Order.class
 app/ui/LogsController.class
 logging/LogService.class

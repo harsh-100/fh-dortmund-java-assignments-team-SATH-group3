@@ -19,6 +19,8 @@ import storage.Order;
 import logging.LogManager;
 import storage.Item;
 import exceptions.ExceptionHandler;
+import app.model.OrdersStore;
+import storage.Order;
 
 public class TaskManager{
 
@@ -89,6 +91,8 @@ public class TaskManager{
 
             for (Item item : items) {
                 Tasks t = new Tasks(LocalDateTime.now().toString(), item);
+                // associate this task with the originating order
+                try { t.setOrderId(order.getId()); } catch (Throwable ignore) {}
                 this.addTask(t);
             }
         }
@@ -109,6 +113,9 @@ public class TaskManager{
         Tasks t = taskQueue.poll();
         if (t != null) {
             int p = pendingCount.decrementAndGet();
+            // mark as active
+            try { t.setStatus(Tasks.TaskStatus.IN_PROGRESS); } catch (Throwable ignore) {}
+            try { activeTasks.put(t.getId(), t); } catch (Throwable ignore) {}
             for (TaskListener l : listeners) {
                 try { l.onPendingCountChanged(p); } catch (Throwable ignore) {}
             }
@@ -126,6 +133,9 @@ public class TaskManager{
     }
 
     public void completeTask(Tasks task) {
+        // finalize task status and remove from active map
+        try { task.setStatus(Tasks.TaskStatus.COMPLETED); } catch (Throwable ignore) {}
+        try { activeTasks.remove(task.getId()); } catch (Throwable ignore) {}
         completedTasksList.addLast(task);
         try{
             while (this.completedTasksList.size() > MAX_COMPLETED_TASKS) {
@@ -153,6 +163,35 @@ public class TaskManager{
         for (TaskListener l : listeners) {
             try { l.onCompletedCountChanged(completed); } catch (Throwable ignore) {}
         }
+
+        // If the task belongs to an order, check if all tasks for that order are completed
+        try {
+            String orderId = task.getOrderId();
+            if (orderId != null) {
+                boolean pendingExists = false;
+                // check pending queue
+                for (Tasks t : taskQueue) {
+                    if (orderId.equals(t.getOrderId())) { pendingExists = true; break; }
+                }
+                // check active tasks
+                if (!pendingExists) {
+                    for (Tasks t : activeTasks.values()) {
+                        if (orderId.equals(t.getOrderId())) { pendingExists = true; break; }
+                    }
+                }
+                if (!pendingExists) {
+                    // all tasks for order are finished -> mark order as SHIPPED
+                    OrdersStore store = OrdersStore.getInstance();
+                    for (Order o : store.getOrders()) {
+                        if (o.getId().equals(orderId)) {
+                            o.setStatus(Order.Status.SHIPPED);
+                            store.persist();
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignore) {}
     }
 
     public int getActiveTaskCount() {

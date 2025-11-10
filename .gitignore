@@ -3,3 +3,7 @@
 out/
 bin/
 build/
+target/
+
+logs/
+*.log

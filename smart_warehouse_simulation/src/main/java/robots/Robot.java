@@ -238,6 +238,8 @@ public class Robot implements Runnable, IGridEntity  {
         Tasks newTask = taskManager.robotGetTask();
         if (newTask != null) {
             this.currentTask = newTask;
+            try { this.currentTask.setRobotId(this.getID()); } catch (Throwable ignore) {}
+            try { this.currentTask.setStatus(Tasks.TaskStatus.IN_PROGRESS); } catch (Throwable ignore) {}
             this.state = RobotState.WORKING;
             this.taskTimer = 0;
         }

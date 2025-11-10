@@ -14,6 +14,10 @@ import tasks.TaskManager;
 
 import java.io.IOException;
 import java.util.List;
+import app.model.OrdersStore;
+// persistence handled by StorageUnitsStore now
+import app.model.StorageUnitsStore;
+ 
 
 public class InventoryController {
 
@@ -38,6 +42,24 @@ public class InventoryController {
     private TaskManager taskManager;
     private StorageUnit storageUnit;
     private ObservableList<String> itemsViewList = FXCollections.observableArrayList();
+    private final OrdersStore ordersStore = OrdersStore.getInstance();
+    private final StorageUnitsStore unitsStore = StorageUnitsStore.getInstance();
+
+    @FXML
+    private javafx.scene.control.ComboBox<String> unitCombo;
+
+    @FXML
+    public void initialize() {
+        // init unit combo
+        unitCombo.getItems().clear();
+        for (StorageUnit su : unitsStore.getUnits()) unitCombo.getItems().add(su.getId());
+        if (!unitCombo.getItems().isEmpty()) unitCombo.getSelectionModel().select(0);
+
+        // allow multiple selection for creating orders
+        itemsListView.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
+        // populate initial items view
+        refreshAllItemsView();
+    }
 
     public void setTaskManager(TaskManager taskManager) {
         this.taskManager = taskManager;
@@ -66,41 +88,53 @@ public class InventoryController {
 
     @FXML
     private void addItem() {
-        if (storageUnit == null) {
-            inventorySummary.setText("No storage unit");
+        // add item into the selected storage unit from combo
+        String selectedUnitId = unitCombo.getSelectionModel().getSelectedItem();
+        if (selectedUnitId == null) {
+            inventorySummary.setText("No storage unit selected");
             return;
         }
-        String id = itemIdField.getText();
+        StorageUnit target = null;
+        for (StorageUnit su : unitsStore.getUnits()) if (su.getId().equals(selectedUnitId)) { target = su; break; }
+        if (target == null) { inventorySummary.setText("Selected unit not found"); return; }
+
+        String userId = itemIdField.getText();
+        String id = userId;
         String name = itemNameField.getText();
         double w = 0.0;
         try { w = Double.parseDouble(itemWeightField.getText()); } catch (Exception ex) {}
-        if (id == null || id.isBlank()) id = "I-" + System.currentTimeMillis();
+        // ensure unique id across all units
+        boolean duplicate = unitsStore.getUnits().stream().flatMap(u -> u.getItems().stream()).anyMatch(i -> i.getId().equals(userId));
+        if (userId == null || userId.isBlank() || duplicate) {
+            id = "I-" + System.currentTimeMillis();
+        }
         if (name == null || name.isBlank()) name = "Item";
         Item it = new Item(id, name, w);
-        boolean ok = storageUnit.addItems(it);
-        inventorySummary.setText(ok ? "Item added" : "Item not added - full");
+        boolean ok = target.addItems(it);
+        inventorySummary.setText(ok ? "Item added to " + target.getId() : "Item not added - full");
         itemIdField.clear(); itemNameField.clear(); itemWeightField.clear();
-        refreshView();
+        unitsStore.persist();
+        refreshAllItemsView();
     }
 
     @FXML
     private void removeItem() {
-        if (storageUnit == null) {
-            inventorySummary.setText("No storage unit");
-            return;
-        }
         String id = removeItemIdField.getText();
         if (id == null || id.isBlank()) return;
-        boolean ok = storageUnit.removeItems(id);
+        boolean ok = false;
+        for (StorageUnit su : unitsStore.getUnits()) {
+            if (su.removeItems(id)) { ok = true; break; }
+        }
         inventorySummary.setText(ok ? "Item removed" : "Item not found");
         removeItemIdField.clear();
-        refreshView();
+        unitsStore.persist();
+        refreshAllItemsView();
     }
 
     @FXML
     private void createOrderFromSelected() {
-        if (storageUnit == null || taskManager == null) {
-            inventorySummary.setText("Storage or TaskManager missing");
+        if (taskManager == null) {
+            inventorySummary.setText("TaskManager missing");
             return;
         }
         Order order = new Order("ORDER-UI-" + System.currentTimeMillis());
@@ -110,24 +144,53 @@ public class InventoryController {
             inventorySummary.setText("No items selected");
             return;
         }
-        List<Item> storageItems = storageUnit.getItems();
+        // find selected items across all storage units
         for (String s : sel) {
-            // s is Item.toString() like id:name(weightkg)
-            String id = s.split(":", 2)[0];
-            for (Item it : storageItems) {
-                if (it.getId().equals(id)) {
-                    order.addItem(it);
-                    break;
+            String id = s.split(":", 2)[0].trim();
+            boolean found = false;
+            for (StorageUnit su : unitsStore.getUnits()) {
+                for (Item it : su.getItems()) {
+                    if (it.getId().equals(id)) { order.addItem(it); found = true; break; }
                 }
+                if (found) break;
             }
         }
         try {
             taskManager.createTasksFromOrders(order);
+            // publish to OrdersStore and persist
+            ordersStore.addOrder(order);
             inventorySummary.setText("Order created: " + order.getId());
+            // green notification
+            inventorySummary.setStyle("-fx-background-color: #d4edda; -fx-text-fill: #155724; -fx-padding:6px;");
+            // clear selection
+            itemsListView.getSelectionModel().clearSelection();
+            // schedule style reset
+            javafx.concurrent.Task<Void> reset = new javafx.concurrent.Task<>() {
+                @Override
+                protected Void call() throws Exception {
+                    Thread.sleep(1500);
+                    return null;
+                }
+            };
+            reset.setOnSucceeded(e -> inventorySummary.setStyle(""));
+            new Thread(reset).start();
         } catch (IOException e) {
             inventorySummary.setText("Failed to create tasks: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private void refreshAllItemsView() {
+        Platform.runLater(() -> {
+            itemsViewList.clear();
+            for (StorageUnit su : unitsStore.getUnits()) {
+                for (Item it : su.getItems()) {
+                    itemsViewList.add(String.format("%s | unit=%s", it.toString(), su.getId()));
+                }
+            }
+            itemsListView.setItems(itemsViewList);
+            inventorySummary.setText("Total items: " + itemsViewList.size());
+        });
     }
 }
 

@@ -1,11 +1,14 @@
 package storage;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.ArrayList;
 import java.awt.Point;
 import exceptions.ExceptionHandler;
 
-public class StorageUnit{
+public class StorageUnit implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String id;
     private double capacity;

@@ -69,12 +69,13 @@ public class Warehouse {
     }
     
     private void createRobots() {
-        
-        Robot robot1 = new Robot(this, new Point(0, 0), taskManager);
-        Robot robot2 = new Robot(this, new Point(5, 0), taskManager);
-        
-        robots.add(robot1);
-        robots.add(robot2);
+        // Create 5 fixed robots with base positions. These are static for now
+        // so we can later attach charging stations to their areas.
+        robots.add(new Robot(this, new Point(0, 0), taskManager));
+        robots.add(new Robot(this, new Point(2, 0), taskManager));
+        robots.add(new Robot(this, new Point(4, 0), taskManager));
+        robots.add(new Robot(this, new Point(6, 0), taskManager));
+        robots.add(new Robot(this, new Point(8, 0), taskManager));
         
     }
 

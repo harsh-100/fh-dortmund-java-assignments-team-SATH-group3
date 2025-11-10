@@ -1,6 +1,10 @@
 package storage;
 
-public class Item {
+import java.io.Serializable;
+
+public class Item implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private String id;
     private String name;
@@ -12,7 +16,7 @@ public class Item {
         this.id = id;
         this.name= name;
         this.weight=weight;
-    } 
+    }
 
     public String getId(){
         return id;
