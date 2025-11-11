@@ -119,7 +119,6 @@ public class TaskManager{
     	try {
             String suId = item.getStorageUnitId();
             if (suId != null && !suId.isBlank()) {
-                // lookup storage unit and use its position as destination
                 StorageUnitsStore sus = StorageUnitsStore.getInstance();
                 StorageUnit su = sus.getUnits()
                 		.stream().
@@ -150,6 +149,7 @@ public class TaskManager{
     }
 
     public Tasks robotGetTask() {
+    	
         Tasks task = taskQueue.poll();
         return task;
     }

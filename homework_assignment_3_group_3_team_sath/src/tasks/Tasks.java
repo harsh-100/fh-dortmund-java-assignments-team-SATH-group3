@@ -1,8 +1,6 @@
 
 package tasks;
 
-import java.util.List;
-// import utils.Position;
 import storage.Item;
 import java.awt.Point;
 import exceptions.ExceptionHandler;
@@ -15,6 +13,7 @@ public class Tasks{
     private String robotId;
     private Item item;
     private String orderId;
+    private boolean toTheRack; 
 
     public Tasks() {
         this.id = "Task №" + num;
@@ -77,6 +76,10 @@ public class Tasks{
 
     public String getRobotId(){
         return robotId;
+    }
+    
+    public Point getLocation() {
+    	
     }
 
     public Item getItems(){
