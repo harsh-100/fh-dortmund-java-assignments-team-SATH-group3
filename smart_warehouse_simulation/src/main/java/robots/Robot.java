@@ -30,6 +30,7 @@ public class Robot implements Runnable, IGridEntity  {
     }
     
     private RobotState state;
+    private RobotState lastLoggedState = null;
     private ChargingStation currentStation;
     public Warehouse warehouse;
     private final DateTimeFormatter df = DateTimeFormatter.ISO_DATE;
@@ -48,7 +49,8 @@ public class Robot implements Runnable, IGridEntity  {
     private static final double LOW_BATTERY_THRESHOLD = 20.0;
     private static final double BATTERY_COST_PER_MOVE = 0.5;
     private static final double CHARGE_RATE_PER_TICK = 4.0;
-    private static final int TASK_DURATION_IN_TICKS = 20; // just a temporary solution as well
+    // Make tasks last roughly 10 seconds: with TICK_DELAY_MS=100ms, 100 ticks ≈ 10s
+    private static final int TASK_DURATION_IN_TICKS = 100; // increased to show progress in UI
     private static final int CHARGING_DURATION_IN_TICKS = 100000;
     private static final double BATTERY_COST_PER_TICK = 0.5;
     private static final int TICK_DELAY_MS = 100;
@@ -81,7 +83,7 @@ public class Robot implements Runnable, IGridEntity  {
                 updateState();
                 performAction();
                 
-                Thread.sleep(100); 
+                    Thread.sleep(TICK_DELAY_MS);
             }
         } catch (InterruptedException e) {
             System.out.println(id + " is stopped");
@@ -194,30 +196,52 @@ public class Robot implements Runnable, IGridEntity  {
         
         switch (this.state) {
         case IDLE:
+            // Try to obtain a task. If a task is obtained, log it. Otherwise
+            // only log IDLE when the state actually changed to avoid flooding logs.
             tryToGetNewTask();
-            if (fileName != null) {
-                String msg = String.format("[%s] Robot %s is IDLE now and tries to get a new task (it's battery level is %s)", LocalDateTime.now(), this.getID(), this.batteryLevel);
-                logManager.writeLog(fileName, msg);
+            if (this.currentTask != null) {
+                if (fileName != null) {
+                    String msg = String.format("[%s] Robot %s starts executing the new task with id: %s", LocalDateTime.now(), this.getID(), this.currentTask.getId());
+                    logManager.writeLog(fileName, msg);
+                }
+                lastLoggedState = RobotState.WORKING;
+            } else {
+                if (fileName != null && lastLoggedState != RobotState.IDLE) {
+                    String msg = String.format("[%s] Robot %s is IDLE (battery=%.1f)", LocalDateTime.now(), this.getID(), this.batteryLevel);
+                    logManager.writeLog(fileName, msg);
+                    lastLoggedState = RobotState.IDLE;
+                }
             }
             break;
-            
-            
+
         case WORKING:
             workOnTask();
-            if (fileName != null) {
-                String msg = String.format("[%s] Robot %s is working on task with id: %s (it's battery level is %s)", LocalDateTime.now(), this.getID(), this.currentTask.getId(), this.batteryLevel);
+            if (fileName != null && lastLoggedState != RobotState.WORKING) {
+                String taskId = this.currentTask != null ? this.currentTask.getId() : "-";
+                String msg = String.format("[%s] Robot %s is working on task with id: %s (battery=%.1f)", LocalDateTime.now(), this.getID(), taskId, this.batteryLevel);
                 logManager.writeLog(fileName, msg);
+                lastLoggedState = RobotState.WORKING;
             }
             break;
-            
+
         case CHARGING:
             chargeBattery();
-            if (fileName != null) {
-                String msg = String.format("[%s] Robot %s is charging (it's battery level is %s)", LocalDateTime.now(), this.getID(), this.batteryLevel);
+            if (fileName != null && lastLoggedState != RobotState.CHARGING) {
+                String msg = String.format("[%s] Robot %s is charging (battery=%.1f)", LocalDateTime.now(), this.getID(), this.batteryLevel);
                 logManager.writeLog(fileName, msg);
+                lastLoggedState = RobotState.CHARGING;
             }
             break;
-        }       
+
+        case WAITING_FOR_CHARGE:
+            // Similar to IDLE: log only on transition
+            if (fileName != null && lastLoggedState != RobotState.WAITING_FOR_CHARGE) {
+                String msg = String.format("[%s] Robot %s is waiting for charge (battery=%.1f)", LocalDateTime.now(), this.getID(), this.batteryLevel);
+                logManager.writeLog(fileName, msg);
+                lastLoggedState = RobotState.WAITING_FOR_CHARGE;
+            }
+            break;
+        }
     }
     
     private void workOnTask() {

@@ -150,7 +150,13 @@ public class InventoryController {
             boolean found = false;
             for (StorageUnit su : unitsStore.getUnits()) {
                 for (Item it : su.getItems()) {
-                    if (it.getId().equals(id)) { order.addItem(it); found = true; break; }
+                    if (it.getId().equals(id)) {
+                        // annotate item with its storage unit so tasks can use the position
+                        try { it.setStorageUnitId(su.getId()); } catch (Throwable ignore) {}
+                        order.addItem(it);
+                        found = true;
+                        break;
+                    }
                 }
                 if (found) break;
             }

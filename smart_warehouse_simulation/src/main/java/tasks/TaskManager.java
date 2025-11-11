@@ -20,7 +20,9 @@ import logging.LogManager;
 import storage.Item;
 import exceptions.ExceptionHandler;
 import app.model.OrdersStore;
+import app.model.StorageUnitsStore;
 import storage.Order;
+import storage.StorageUnit;
 
 public class TaskManager{
 
@@ -90,7 +92,19 @@ public class TaskManager{
             // StorageUnit storageUnit = new StorageUnit(null, MAX_COMPLETED_TASKS, null);
 
             for (Item item : items) {
-                Tasks t = new Tasks(LocalDateTime.now().toString(), item);
+                Tasks t = null;
+                try {
+                    String suId = item.getStorageUnitId();
+                    if (suId != null && !suId.isBlank()) {
+                        // lookup storage unit and use its position as destination
+                        StorageUnitsStore sus = StorageUnitsStore.getInstance();
+                        StorageUnit su = sus.getUnits().stream().filter(x -> x.getId().equals(suId)).findFirst().orElse(null);
+                        if (su != null) {
+                            t = new Tasks(LocalDateTime.now().toString(), su.getPosition(), item);
+                        }
+                    }
+                } catch (Throwable ignore) {}
+                if (t == null) t = new Tasks(LocalDateTime.now().toString(), item);
                 // associate this task with the originating order
                 try { t.setOrderId(order.getId()); } catch (Throwable ignore) {}
                 this.addTask(t);
@@ -186,6 +200,22 @@ public class TaskManager{
                         if (o.getId().equals(orderId)) {
                             o.setStatus(Order.Status.SHIPPED);
                             store.persist();
+
+                            // remove items belonging to this order from storage units
+                            try {
+                                StorageUnitsStore sus = StorageUnitsStore.getInstance();
+                                for (storage.Item it : o.getItems()) {
+                                    for (StorageUnit su : sus.getUnits()) {
+                                        su.removeItems(it.getId());
+                                    }
+                                }
+                                // persist storage units after removals
+                                sus.persist();
+                            } catch (Throwable remEx) {
+                                // log or ignore but don't crash the task manager
+                                remEx.printStackTrace();
+                            }
+
                             break;
                         }
                     }
