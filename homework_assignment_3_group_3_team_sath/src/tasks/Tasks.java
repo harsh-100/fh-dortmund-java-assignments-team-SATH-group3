@@ -14,6 +14,7 @@ public class Tasks{
     private Point destination;
     private String robotId;
     private Item item;
+    private String orderId;
 
     public Tasks() {
         this.id = "Task №" + num;
@@ -28,11 +29,13 @@ public class Tasks{
     }
     private TaskStatus status;
 
-    public Tasks(String id, Point destination, Item item){
+    public Tasks(Point destination, Item item){
         try {
-            this.id = id;
+            this.id = "Task №" + num;
+            num++;
             this.destination = destination;
             this.robotId = null;
+            this.orderId = null;
             this.item = item;
             this.status = TaskStatus.PENDING;
         } catch (Throwable t) {
@@ -45,11 +48,13 @@ public class Tasks{
         }
     }
 
-    public Tasks(String id, Item item){
+    public Tasks(Item item){
         try {
-            this.id = id;
+            this.id = "Task №" + num;
+            num++;
             this.destination = null;
             this.robotId = null;
+            this.orderId = null;
             this.item = item;
             this.status = TaskStatus.PENDING;
         } catch (Throwable t) {
@@ -95,6 +100,10 @@ public class Tasks{
         } catch (Throwable t) {
             ExceptionHandler.handle(t, "tasks.Tasks.setRobotId");
         }
+    }
+    
+    public void setOrderId(String id) {
+    	this.orderId = id;
     }
 
     public boolean isComplete(){
