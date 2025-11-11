@@ -114,8 +114,9 @@ public class Robot implements Runnable, IGridEntity  {
         
         
         
-        else if (batteryLevel < LOW_BATTERY_THRESHOLD
-                && state != RobotState.CHARGING) {
+    else if (batteryLevel < LOW_BATTERY_THRESHOLD
+        && state != RobotState.CHARGING
+        && state != RobotState.WORKING) {
             
             if (this.currentTask != null) {
                 taskManager.requeueTask(this.currentTask);

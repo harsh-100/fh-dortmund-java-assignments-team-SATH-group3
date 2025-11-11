@@ -182,13 +182,39 @@ public class DashboardController {
         // the ListView that the controller owns so the dashboard UI becomes
         // visible again.
         try {
-            // Create a small title node for the robots section
-            javafx.scene.control.Label robotsTitle = new javafx.scene.control.Label("Robots:");
-            robotsTitle.setStyle("-fx-font-weight:bold");
+            // Load full panels and embed them so Dashboard mirrors individual screens
+            // Left: AGV panel (robots + charging stations + queue)
+            // Right: Tasks (top) and Orders (bottom)
+            FXMLLoader agvLoader = new FXMLLoader(getClass().getResource("/fxml/AGVPanel.fxml"));
+            Node agvNode = agvLoader.load();
+            Object agvController = agvLoader.getController();
+            if (agvController instanceof AGVPanelController) {
+                ((AGVPanelController) agvController).setWarehouse(this.warehouse);
+                ((AGVPanelController) agvController).setTaskManager(this.taskManager);
+            }
 
-            contentArea.getChildren().setAll(simStatusLabel, pendingTasksLabel, completedTasksLabel, robotsTitle, robotListView);
-            // Refresh contents immediately
-            updateUI();
+            FXMLLoader tasksLoader = new FXMLLoader(getClass().getResource("/fxml/Tasks.fxml"));
+            Node tasksNode = tasksLoader.load();
+            Object tasksController = tasksLoader.getController();
+            if (tasksController instanceof TasksController) {
+                ((TasksController) tasksController).setTaskManager(this.taskManager);
+            }
+
+            FXMLLoader ordersLoader = new FXMLLoader(getClass().getResource("/fxml/Orders.fxml"));
+            Node ordersNode = ordersLoader.load();
+            // OrdersController reads OrdersStore on initialize, no wiring needed
+
+            // Layout: HBox with AGV panel on left and VBox (Tasks, Orders) on right
+            javafx.scene.layout.HBox main = new javafx.scene.layout.HBox(10);
+            javafx.scene.layout.VBox right = new javafx.scene.layout.VBox(10);
+            right.getChildren().addAll(tasksNode, ordersNode);
+            // Let children grow
+            javafx.scene.layout.HBox.setHgrow(agvNode, javafx.scene.layout.Priority.ALWAYS);
+            javafx.scene.layout.HBox.setHgrow(right, javafx.scene.layout.Priority.ALWAYS);
+            main.getChildren().addAll(agvNode, right);
+
+            contentArea.getChildren().setAll(simStatusLabel, scenarioStatusLabel, pendingTasksLabel, completedTasksLabel, main);
+            // no need to call updateUI() because embedded controllers poll/update themselves
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -222,6 +248,14 @@ public class DashboardController {
     @FXML
     private void openStorageUnits() {
         loadIntoContent("/fxml/StorageUnits.fxml");
+    }
+
+    @FXML
+    private void openChargingStations() {
+        // kept for backward compatibility with Dashboard.fxml buttons
+        // Charging view is largely integrated in AGV panel, but keep loader
+        // so older FXML references don't break.
+        loadIntoContent("/fxml/Charging.fxml");
     }
 
 
