@@ -25,6 +25,8 @@ public class Warehouse {
     private PathFinder pathFinder;
     private Point idleLocation;
     private Point dropOffLocation;
+    private Point chargingLocation;
+
     
     public Warehouse() {
 
@@ -39,7 +41,8 @@ public class Warehouse {
         stations = new ArrayList<>();
         this.pathFinder = new PathFinder(grid);
         this.dropOffLocation = new Point(1, 1);
-        this.idleLocation = new Point(2, 1);
+        this.idleLocation = new Point(3, 1);
+        this.chargingLocation = new Point(5, 1);
 
         Item item1 = new Item("computer");
         Tasks task1 = new Tasks("task1", new Point(5,5), item1);
@@ -61,8 +64,8 @@ public class Warehouse {
 
     private void createStations() {
     	
-    	ChargingStation station1 = new ChargingStation(new Point(0, 9)); 
-        ChargingStation station2 = new ChargingStation(new Point(9, 8));
+    	ChargingStation station1 = new ChargingStation(this.chargingLocation);
+        ChargingStation station2 = new ChargingStation(this.chargingLocation);
         
         stations.add(station1);
         stations.add(station2);
