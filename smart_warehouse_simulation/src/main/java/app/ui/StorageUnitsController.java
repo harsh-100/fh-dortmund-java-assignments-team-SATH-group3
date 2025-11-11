@@ -30,8 +30,26 @@ public class StorageUnitsController {
             int idx = newV.intValue();
             if (idx >= 0 && idx < store.getUnits().size()) {
                 StorageUnit su = store.getUnits().get(idx);
-                unitDetailLabel.setText(String.format("ID: %s\nCapacity: %.0f\nItems: %d\nPosition: (%d,%d)",
-                        su.getId(), su.getCapacity(), su.getCurrentItemCount(), su.getPosition().x, su.getPosition().y));
+                // build items available string
+                String itemsStr;
+                try {
+                    if (su.getItems() == null || su.getItems().isEmpty()) {
+                        itemsStr = "Null";
+                    } else {
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 0; i < su.getItems().size(); i++) {
+                            if (i > 0) sb.append(", ");
+                            sb.append(su.getItems().get(i).toString());
+                        }
+                        itemsStr = sb.toString();
+                    }
+                } catch (Throwable t) {
+                    itemsStr = "<error>";
+                }
+
+                unitDetailLabel.setText(String.format("ID: %s\nCapacity: %.0f\nItems: %d\nPosition: (%d,%d)\nItems available: %s",
+                        su.getId(), su.getCapacity(), su.getCurrentItemCount(), su.getPosition().x, su.getPosition().y,
+                        itemsStr));
             } else {
                 unitDetailLabel.setText("Select a storage unit to see details");
             }

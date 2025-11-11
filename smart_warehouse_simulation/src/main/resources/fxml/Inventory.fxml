@@ -5,8 +5,13 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
 <VBox fx:controller="app.ui.InventoryController" spacing="8" style="-fx-padding:10" xmlns:fx="http://javafx.com/fxml">
-    <Label text="Inventory Management" style="-fx-font-size:14px; -fx-font-weight:bold;" />
+    <HBox>
+        <Label text="Inventory Management" style="-fx-font-size:14px; -fx-font-weight:bold;" />
+        <Region HBox.hgrow="ALWAYS" />
+        <Button fx:id="sampleDataButton" text="Add Sample Data" onAction="#addSampleData" />
+    </HBox>
     <Label fx:id="inventorySummary" text="Items: 0" />
 
     <Label text="Storage Items:" />
@@ -16,10 +21,11 @@
     <javafx.scene.control.ComboBox fx:id="unitCombo" />
 
     <HBox spacing="8">
-        <TextField fx:id="itemIdField" promptText="Item ID" />
+        <!-- Generated 3-digit ID shown to user; ID is not entered by user -->
+        <!-- <Label fx:id="generatedIdLabel" text="ID:" /> -->
         <TextField fx:id="itemNameField" promptText="Item name" />
         <TextField fx:id="itemWeightField" promptText="Weight" />
-        <Button text="Add Item" onAction="#addItem" />
+        <Button fx:id="addItemButton" text="Add Item" onAction="#addItem" disable="true" />
     </HBox>
 
     <HBox spacing="8">
