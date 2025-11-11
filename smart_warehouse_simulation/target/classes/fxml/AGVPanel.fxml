@@ -15,12 +15,8 @@
 
     <Label text="Robots:" style="-fx-font-weight:bold" />
     <ListView fx:id="robotListView" prefHeight="200" />
-
-    <Label text="Add manual task" style="-fx-font-weight:bold; -fx-padding:8 0 0 0" />
-    <HBox spacing="8">
-        <TextField fx:id="itemIdField" promptText="Item ID" />
-        <TextField fx:id="itemNameField" promptText="Item name" />
-        <TextField fx:id="itemWeightField" promptText="Weight" />
-        <Button text="Add Task" onAction="#addManualTask" />
-    </HBox>
+    <Label text="Charging Stations:" style="-fx-font-weight:bold; -fx-padding:8 0 0 0" />
+    <ListView fx:id="stationsListView" prefHeight="120" />
+    <Label text="Charging Queue:" style="-fx-font-weight:bold; -fx-padding:8 0 0 0" />
+    <ListView fx:id="queueListView" prefHeight="120" />
 </VBox>

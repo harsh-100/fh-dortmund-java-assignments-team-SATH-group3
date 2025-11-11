@@ -7,7 +7,6 @@ import java.awt.Point;
 import charging.ChargingStation;
 import warehouse.Warehouse;
 import logging.LogManager;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,12 +45,13 @@ public class Robot implements Runnable, IGridEntity  {
     //----------------------------------------
     
     private static final double MAX_BATTERY = 100.0;
-    private static final double LOW_BATTERY_THRESHOLD = 20.0;
+    private static final double LOW_BATTERY_THRESHOLD = 50.0;
     private static final double BATTERY_COST_PER_MOVE = 0.5;
     private static final double CHARGE_RATE_PER_TICK = 4.0;
     // Make tasks last roughly 10 seconds: with TICK_DELAY_MS=100ms, 100 ticks ≈ 10s
-    private static final int TASK_DURATION_IN_TICKS = 100; // increased to show progress in UI
-    private static final int CHARGING_DURATION_IN_TICKS = 100000;
+    private static final int TASK_DURATION_IN_TICKS = 100; // increased to show progress in UI (~10s)
+    // charging lasts ~10s as well (100 ticks × 100ms)
+    private static final int CHARGING_DURATION_IN_TICKS = 100;
     private static final double BATTERY_COST_PER_TICK = 0.5;
     private static final int TICK_DELAY_MS = 100;
     
@@ -83,7 +83,7 @@ public class Robot implements Runnable, IGridEntity  {
                 updateState();
                 performAction();
                 
-                    Thread.sleep(TICK_DELAY_MS);
+                    Thread.sleep(TICK_DELAY_MS );
             }
         } catch (InterruptedException e) {
             System.out.println(id + " is stopped");
@@ -129,7 +129,7 @@ public class Robot implements Runnable, IGridEntity  {
                 this.state = RobotState.CHARGING;
                 this.chargeTimer = 0;
                 this.currentStation = station;
-                this.currentStation.occupy();
+                this.currentStation.occupy(this);
                 this.currentPosition = station.getLocation();
 
                 if (fileName != null) {
@@ -148,35 +148,30 @@ public class Robot implements Runnable, IGridEntity  {
         }
 
         else if (state == RobotState.IDLE && batteryLevel > LOW_BATTERY_THRESHOLD) {
-            if (this.currentTask != null) {
-                this.currentTask = taskManager.robotGetTask();
-
-                if (fileName != null) {
-                    String msg = String.format("[%s] Robot %s starts executing of the new task with id: %s", LocalDateTime.now(), this.getID(), this.currentTask.getId());
-                    logManager.writeLog(fileName, msg);
-                }
-            }
+            // nothing special here; robot will attempt to get new task in performAction()
         }
         
    
         
 //     else if (state == RobotState.CHARGING && chargeTimer >= CHARGING_DURATION_IN_TICKS) {
-        else if (state == RobotState.CHARGING && this.batteryLevel == MAX_BATTERY) {
-//            this.batteryLevel = MAX_BATTERY;
+        else if (state == RobotState.CHARGING && this.chargeTimer >= CHARGING_DURATION_IN_TICKS) {
+            // charging finished after configured ticks
+            this.batteryLevel = MAX_BATTERY;
             this.state = RobotState.IDLE;
             this.chargeTimer = 0;
-            
+
             if (this.currentStation != null) {
-//             this.currentStation.release(); // ?
                 warehouse.releaseStation(this.currentStation);
                 this.currentStation = null;
             }
-            
         }
         
         else if (state == RobotState.WORKING && taskTimer >= TASK_DURATION_IN_TICKS) {
-            
+            // task finished: notify TaskManager, reduce battery and become idle
             taskManager.completeTask(this.currentTask);
+            // reduce battery by 20% upon task completion
+            this.batteryLevel -= 20.0;
+            if (this.batteryLevel < 0) this.batteryLevel = 0;
             this.currentTask = null;
             this.state = RobotState.IDLE;
             this.taskTimer = 0;

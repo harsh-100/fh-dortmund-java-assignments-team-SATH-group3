@@ -6,15 +6,13 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
+ 
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.ListView;
 import javafx.util.Duration;
 import robots.Robot;
-import storage.Item;
 import tasks.TaskManager;
-import tasks.Tasks;
 import warehouse.Warehouse;
 
 import java.util.List;
@@ -28,16 +26,10 @@ public class AGVPanelController {
     private ListView<String> robotListView;
 
     @FXML
-    private TextField itemIdField;
+    private ListView<String> stationsListView;
 
     @FXML
-    private TextField itemNameField;
-
-    @FXML
-    private TextField itemWeightField;
-
-    @FXML
-    private Button addTaskButton;
+    private ListView<String> queueListView;
 
     private Warehouse warehouse;
     private TaskManager taskManager;
@@ -57,12 +49,60 @@ public class AGVPanelController {
         if (warehouse == null || taskManager == null) return;
         if (updater != null) return;
 
-        ObservableList<String> items = FXCollections.observableArrayList();
-        robotListView.setItems(items);
+    ObservableList<String> items = FXCollections.observableArrayList();
+    robotListView.setItems(items);
 
-        updater = new Timeline(new KeyFrame(Duration.millis(500), e -> refreshRobots()));
+    // setup charging station and queue lists
+    stationsListView.setItems(FXCollections.observableArrayList());
+    queueListView.setItems(FXCollections.observableArrayList());
+
+    // color occupied stations green
+    stationsListView.setCellFactory(lv -> new javafx.scene.control.ListCell<>() {
+        @Override
+        protected void updateItem(String item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty || item == null) {
+                setText(null);
+                setStyle("");
+            } else {
+                setText(item);
+                if (item.contains("occupied")) {
+                    setStyle("-fx-background-color: #d4edda; -fx-text-fill: #155724;"); // green
+                } else {
+                    setStyle("");
+                }
+            }
+        }
+    });
+
+    updater = new Timeline(new KeyFrame(Duration.millis(500), e -> refreshRobots()));
         updater.setCycleCount(Timeline.INDEFINITE);
         updater.play();
+        // cell factory to color rows by robot state
+        robotListView.setCellFactory(lv -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    // determine state from the text (state=<STATE> in formatted string)
+                    if (item.contains("| IDLE |")) {
+                        setStyle("");
+                    } else if (item.contains("| WORKING |")) {
+                        setStyle("-fx-background-color: #d4edda; -fx-text-fill: #155724;"); // green
+                    } else if (item.contains("| CHARGING |")) {
+                        setStyle("-fx-background-color: #fff3cd; -fx-text-fill: #856404;"); // yellow
+                    } else if (item.contains("| WAITING_FOR_CHARGE |")) {
+                        setStyle("-fx-background-color: #f8d7da; -fx-text-fill: #721c24;"); // light red
+                    } else {
+                        setStyle("");
+                    }
+                }
+            }
+        });
     }
 
     private void refreshRobots() {
@@ -77,6 +117,17 @@ public class AGVPanelController {
                             r.getID(), r.getState(), r.getBattery(), r.getLocation().x, r.getLocation().y, taskId);
                     items.add(s);
                 }
+                // refresh charging stations (format points as (x,y))
+                ObservableList<String> stItems = stationsListView.getItems();
+                stItems.clear();
+                warehouse.getStations().forEach(s -> {
+                    String point = String.format("(%d,%d)", s.getLocation().x, s.getLocation().y);
+                    stItems.add(s.getID() + " - " + (s.isAvailable() ? "free" : "occupied") + " @ " + point);
+                });
+                // refresh charging queue
+                ObservableList<String> qItems = queueListView.getItems();
+                qItems.clear();
+                warehouse.getChargingQueueSnapshot().forEach(rq -> qItems.add(rq.getID() + " | batt=" + String.format("%.1f", rq.getBattery())));
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -105,32 +156,8 @@ public class AGVPanelController {
 
     @FXML
     private void addManualTask() {
-        if (taskManager == null) {
-            statusLabel.setText("TaskManager not available");
-            return;
-        }
-
-        String itemId = itemIdField.getText();
-        String itemName = itemNameField.getText();
-        double weight = 0.0;
-        try {
-            weight = Double.parseDouble(itemWeightField.getText());
-        } catch (NumberFormatException e) {
-            // ignore and keep 0.0
-        }
-
-        if (itemId == null || itemId.isBlank()) itemId = "UI-" + System.currentTimeMillis();
-        if (itemName == null || itemName.isBlank()) itemName = "ManualItem";
-
-        Item it = new Item(itemId, itemName, weight);
-        Tasks t = new Tasks("UI-" + System.currentTimeMillis(), it);
-        taskManager.addTask(t);
-        statusLabel.setText("Added task: " + t.getId());
-
-        // clear fields
-        itemIdField.clear();
-        itemNameField.clear();
-        itemWeightField.clear();
+        // Manual task input removed; kept for future use if needed
+        statusLabel.setText("Manual task disabled in this panel");
     }
 }
 

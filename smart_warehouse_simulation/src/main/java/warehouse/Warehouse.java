@@ -97,7 +97,7 @@ public class Warehouse {
     public synchronized ChargingStation requestCharging(Robot robot) {
         for (ChargingStation station : stations) {
             if (station.isAvailable()) {
-                station.occupy();
+                station.occupy(robot);
                 return station;
             }
         }
@@ -116,6 +116,8 @@ public class Warehouse {
     public synchronized void releaseStation(ChargingStation station) {
         if (!chargingQueue.isEmpty()) {
             Robot waitingRobot = chargingQueue.poll();
+            // occupy the station for this waiting robot and assign
+            station.occupy(waitingRobot);
             waitingRobot.assignStation(station);
         } else {
             station.release();
@@ -130,7 +132,6 @@ public class Warehouse {
         
         // Start threads and keep references so we can stop them later
         for (Robot robot : robots) {
-            robot.setBatteryForTest(19);
             Thread robotThread = new Thread(robot);
             robotThreads.add(robotThread);
             robotThread.start(); 
@@ -157,6 +158,16 @@ public class Warehouse {
      */
     public List<Robot> getRobots() {
         return new ArrayList<>(this.robots);
+    }
+
+    /** Return copy of charging stations for UI inspection */
+    public List<ChargingStation> getStations() {
+        return new ArrayList<>(this.stations);
+    }
+
+    /** Return snapshot of the charging queue */
+    public List<Robot> getChargingQueueSnapshot() {
+        return new ArrayList<>(this.chargingQueue);
     }
 
     /**

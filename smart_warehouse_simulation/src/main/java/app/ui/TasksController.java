@@ -43,7 +43,7 @@ public class TasksController {
                 for (Tasks t : pending) items.add(t.getId() + " | PENDING | item=" + t.getItems());
 
                 // active
-                for (Tasks t : taskManager.getActiveTasks().values()) items.add(t.getId() + " | IN_PROGRESS | robot=" + t.getRobotId() + " | item=" + t.getItems());
+                for (Tasks t : taskManager.getActiveTasks().values()) items.add(t.getId() + " | PICKED | robot=" + t.getRobotId() + " | item=" + t.getItems());
 
                 // completed
                 for (Tasks t : taskManager.getCompletedTasksList()) items.add(t.getId() + " | COMPLETED | item=" + t.getItems());

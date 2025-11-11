@@ -17,6 +17,7 @@ public class ChargingStation implements IGridEntity {
     private final String id;
     private final Point location;
     private boolean isAvailable = true;
+    private robots.Robot occupant = null;
     private LogManager logManager;
     private final DateTimeFormatter df = DateTimeFormatter.ISO_DATE;
 
@@ -46,9 +47,10 @@ public class ChargingStation implements IGridEntity {
     }
     
     
-    public synchronized boolean occupy() {
+    public synchronized boolean occupy(robots.Robot robot) {
         if (this.isAvailable) {
             this.isAvailable = false;
+            this.occupant = robot;
             
             
              if (logManager != null) {
@@ -67,6 +69,7 @@ public class ChargingStation implements IGridEntity {
     
     public synchronized void release() {
         this.isAvailable = true;
+        this.occupant = null;
         
         if (logManager != null) {
             String date = df.format(LocalDate.now());
@@ -82,6 +85,8 @@ public class ChargingStation implements IGridEntity {
     public boolean isAvailable() {
         return this.isAvailable;
     }
+
+    public robots.Robot getOccupant() { return this.occupant; }
     
     
     

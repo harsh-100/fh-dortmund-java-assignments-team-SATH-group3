@@ -224,6 +224,7 @@ public class DashboardController {
         loadIntoContent("/fxml/StorageUnits.fxml");
     }
 
+
     @FXML
     private void flushAllData() {
         try {
