@@ -8,8 +8,10 @@ import java.io.IOException;
 
 import charging.ChargingStation;
 import robots.Robot;
+import storage.Item;
 import tasks.TaskManager;
 import tasks.Tasks;
+import utils.PathFinder;
 import utils.WarehouseGrid;
 
 public class Warehouse {
@@ -20,10 +22,13 @@ public class Warehouse {
     private List<ChargingStation> stations;
     private Random random = new Random();
     private Queue<Robot> chargingQueue = new LinkedList<>();
+    private PathFinder pathFinder;
+    private Point idleLocation;
+    private Point dropOffLocation;
     
     public Warehouse() {
 
-        grid = new WarehouseGrid(10, 10); 
+        grid = new WarehouseGrid(10, 10);
         try {
         	taskManager = new TaskManager("TM1"); 
         } catch (IOException e) {
@@ -32,17 +37,32 @@ public class Warehouse {
         }
         robots = new ArrayList<>();
         stations = new ArrayList<>();
+        this.pathFinder = new PathFinder(grid);
+        this.dropOffLocation = new Point(1, 1);
+        this.idleLocation = new Point(2, 1);
+
+        Item item1 = new Item("computer");
+        Tasks task1 = new Tasks("task1", new Point(5,5), item1);
+        this.taskManager.addTask(task1);
 
 
         createStations();
         createRobots();
         
     }
-    
+
+    public Point getIdleLocation() {
+        return idleLocation;
+    }
+
+    public Point getDropOffLocation() {
+        return dropOffLocation;
+    }
+
     private void createStations() {
     	
     	ChargingStation station1 = new ChargingStation(new Point(0, 9)); 
-        ChargingStation station2 = new ChargingStation(new Point(9, 9)); 
+        ChargingStation station2 = new ChargingStation(new Point(9, 8));
         
         stations.add(station1);
         stations.add(station2);
@@ -54,8 +74,8 @@ public class Warehouse {
     
     private void createRobots() {
     	
-    	Robot robot1 = new Robot(this, new Point(0, 0), taskManager);
-        Robot robot2 = new Robot(this, new Point(5, 0), taskManager);
+    	Robot robot1 = new Robot(this, new Point(0, 0), taskManager, pathFinder);
+        Robot robot2 = new Robot(this, new Point(5, 0), taskManager, pathFinder);
         
         robots.add(robot1);
         robots.add(robot2);
@@ -111,69 +131,68 @@ public class Warehouse {
         System.out.println(stations.size() + " stations were created");
         
         for (Robot robot : robots) {
-            robot.setBatteryForTest(19);
             Thread robotThread = new Thread(robot);
             robotThread.start(); 
         }
     }
 
-    public void task1_simulation(){
+//    public void task1_simulation(){
+//
+//        ChargingStation station3 = new ChargingStation(new Point(9, 0));
+//        ChargingStation station4 = new ChargingStation(new Point(0, 0));
+//
+//        stations.add(station3);
+//        stations.add(station4);
+//
+//        grid.placeObject(station3, station3.getLocation());
+//        grid.placeObject(station4, station3.getLocation());
+//
+//        Robot robot3 = new Robot(this, new Point(5, 5), taskManager);
+//        Robot robot4 = new Robot(this, new Point(0, 5), taskManager);
+//        Robot robot5 = new Robot(this, new Point(1, 5), taskManager);
+//
+//        robots.add(robot3);
+//        robots.add(robot4);
+//        robots.add(robot5);
+//
+//        System.out.println("Sumulation of the first subtask is running");
+//        System.out.println(robots.size() + " robots were created");
+//        System.out.println(stations.size() + " stations were created");
+//
+//        for (Robot robot : robots) {
+//            robot.setBatteryForTest(19.0);
+//            Thread robotThread = new Thread(robot);
+//            robotThread.start();
+//        }
+//
+//    }
 
-        ChargingStation station3 = new ChargingStation(new Point(9, 0));
-        ChargingStation station4 = new ChargingStation(new Point(0, 0));
-
-        stations.add(station3);
-        stations.add(station4);
-
-        grid.placeObject(station3, station3.getLocation());
-        grid.placeObject(station4, station3.getLocation());
-
-        Robot robot3 = new Robot(this, new Point(5, 5), taskManager);
-        Robot robot4 = new Robot(this, new Point(0, 5), taskManager);
-        Robot robot5 = new Robot(this, new Point(1, 5), taskManager);
-
-        robots.add(robot3);
-        robots.add(robot4);
-        robots.add(robot5);
-
-        System.out.println("Sumulation of the first subtask is running");
-        System.out.println(robots.size() + " robots were created");
-        System.out.println(stations.size() + " stations were created");
-
-        for (Robot robot : robots) {
-            robot.setBatteryForTest(19.0);
-            Thread robotThread = new Thread(robot);
-            robotThread.start();
-        }
-
-    }
-
-    public void task2_simulation(){
-
-        Robot robot3 = new Robot(this, new Point(5, 5), taskManager);
-        Robot robot4 = new Robot(this, new Point(0, 5), taskManager);
-        Robot robot5 = new Robot(this, new Point(1, 5), taskManager);
-
-        robots.add(robot3);
-        robots.add(robot4);
-        robots.add(robot5);
-
-        System.out.println("Sumulation of the first subtask is running");
-        System.out.println(robots.size() + " robots were created");
-        System.out.println(stations.size() + " stations were created");
-
-        for (Robot robot : robots) {
-            robot.setBatteryForTest(19.0);
-            Thread robotThread = new Thread(robot);
-
-            try {
-                Thread.sleep(random.nextInt(2000));
-            } catch (InterruptedException e) {}
-
-            robotThread.start();
-        }
-
-    }
+//    public void task2_simulation(){
+//
+//        Robot robot3 = new Robot(this, new Point(5, 5), taskManager);
+//        Robot robot4 = new Robot(this, new Point(0, 5), taskManager);
+//        Robot robot5 = new Robot(this, new Point(1, 5), taskManager);
+//
+//        robots.add(robot3);
+//        robots.add(robot4);
+//        robots.add(robot5);
+//
+//        System.out.println("Sumulation of the first subtask is running");
+//        System.out.println(robots.size() + " robots were created");
+//        System.out.println(stations.size() + " stations were created");
+//
+//        for (Robot robot : robots) {
+//            robot.setBatteryForTest(19.0);
+//            Thread robotThread = new Thread(robot);
+//
+//            try {
+//                Thread.sleep(random.nextInt(2000));
+//            } catch (InterruptedException e) {}
+//
+//            robotThread.start();
+//        }
+//
+//    }
 
     public void task3_simulation(){
 
@@ -194,7 +213,7 @@ public class Warehouse {
     }
     public static void main(String[] args) {
         Warehouse warehouse = new Warehouse();
-        warehouse.task3_simulation();
+        warehouse.startSimulation();
     }
 
 }

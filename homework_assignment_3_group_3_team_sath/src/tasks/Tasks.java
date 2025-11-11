@@ -13,6 +13,7 @@ public class Tasks{
     private String id;
     private Point destination;
     private String robotId;
+    private String orderId;
     private Item item;
 
     public Tasks() {
@@ -34,6 +35,7 @@ public class Tasks{
             this.destination = destination;
             this.robotId = null;
             this.item = item;
+            this.orderId = null;
             this.status = TaskStatus.PENDING;
         } catch (Throwable t) {
             ExceptionHandler.handle(t, "tasks.Tasks.<init>");
@@ -51,6 +53,7 @@ public class Tasks{
             this.destination = null;
             this.robotId = null;
             this.item = item;
+            this.orderId = null;
             this.status = TaskStatus.PENDING;
         } catch (Throwable t) {
             ExceptionHandler.handle(t, "tasks.Tasks.<init>");
@@ -77,6 +80,10 @@ public class Tasks{
     public Item getItems(){
         return item;
     }
+
+    public String getOrderId() { return orderId; }
+
+    public void setOrderId(String orderId) { this.orderId = orderId; }
 
     public TaskStatus getStatus(){
         return status;

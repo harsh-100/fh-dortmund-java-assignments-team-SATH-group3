@@ -7,7 +7,7 @@ import exceptions.ExceptionHandler;
 
 public class StorageUnit{
 
-    private final String id;
+    private static String id;
     private double capacity;
     private Point position;
     private List<Item> items;

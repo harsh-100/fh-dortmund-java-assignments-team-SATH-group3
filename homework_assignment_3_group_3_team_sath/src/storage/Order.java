@@ -7,19 +7,20 @@ import java.util.ArrayList;
 
 //This class will represents the Order by the customer
 public class Order{
+    private static int num = 0;
     private String id;
     public enum Status {
         PENDING,
-        SHIPPED,
+        IN_PROGRESS,
         DELIVERED,
-        CANCELLED
     }
     private Status status;
     private List<Item> items;
     private long timestamp;
 
     public Order(String id) {
-        this.id = id;
+//        this.id = id;
+        this.id = "Order_" + num++;
         this.status = Status.PENDING;
         this.items = new ArrayList<>();
         this.timestamp = System.currentTimeMillis();

@@ -4,6 +4,8 @@
 /**
  * 
  */
-module homework_assignment_3_group_3_team_sath {
+module FinalProject {
 	requires java.desktop;
+    requires org.junit.jupiter.api;
+//    requires FinalProject;
 }
