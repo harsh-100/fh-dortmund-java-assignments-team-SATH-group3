@@ -38,7 +38,7 @@ public class ChargingStation implements IGridEntity {
         
         if (logManager != null) {
             String date = df.format(LocalDate.now());
-            String fileName = String.format("chargingStationLogs/%s-%s.log", this.getID(), date);
+            String fileName = String.format("ChargingStationLogs/%s-%s.log", this.getID(), date);
             String msg = String.format("[%s] Charging station %s is set up in the next coordinates (%d, %d)", LocalDateTime.now(), this.getID(), this.location.x, this.location.y);
             logManager.writeLog(fileName, msg);
         }
@@ -55,8 +55,7 @@ public class ChargingStation implements IGridEntity {
             
              if (logManager != null) {
                     String date = df.format(LocalDate.now());
-                    String fileName = String.format("chargingStationLogs/%s-%s.log", this.getID(), date);
-//                    String msg = String.format("[%s] Assigned task %s to AGV %s — status=%s", LocalDateTime.now(), task.getId(), robot.getId(), task.getStatus());
+                    String fileName = String.format("ChargingStationLogs/%s-%s.log", this.getID(), date);
                     String msg = String.format("[%s] Charging station %s is occupied", LocalDateTime.now(), this.getID());
                     logManager.writeLog(fileName, msg);
                 }
@@ -73,7 +72,7 @@ public class ChargingStation implements IGridEntity {
         
         if (logManager != null) {
             String date = df.format(LocalDate.now());
-            String fileName = String.format("chargingStationLogs/%s-%s.log", this.getID(), date);
+            String fileName = String.format("ChargingStationLogs/%s-%s.log", this.getID(), date);
             String msg = String.format("[%s] Charging station %s is available again", LocalDateTime.now(), this.getID());
             logManager.writeLog(fileName, msg);
         }

@@ -47,6 +47,9 @@ public class DashboardController {
     private ListView<String> robotListView;
 
     @FXML
+    private Label robotsHeadingLabel;
+
+    @FXML
     private Button scenarioAButton;
 
     @FXML
@@ -162,7 +165,13 @@ public class DashboardController {
             pendingTasksLabel.setText("Pending tasks: " + pending);
             completedTasksLabel.setText("Completed tasks: " + completed);
 
-            // robots
+            // robots - heading shows base and drop-off points, rows show per-robot state
+            try {
+                String base = String.format("(%d,%d)", warehouse.getIdleLocation().x, warehouse.getIdleLocation().y);
+                String drop = String.format("(%d,%d)", warehouse.getDropOffLocation().x, warehouse.getDropOffLocation().y);
+                robotsHeadingLabel.setText(String.format("Robots (base=%s, drop=%s):", base, drop));
+            } catch (Exception ignored) {}
+
             List<Robot> robots = warehouse.getRobots();
             ObservableList<String> items = robotListView.getItems();
             items.clear();
@@ -262,6 +271,28 @@ public class DashboardController {
     @FXML
     private void flushAllData() {
         try {
+            // stop running robots first to avoid races while we clear data
+            if (warehouse != null) {
+                warehouse.stopSimulation();
+            }
+
+            // Clear task manager queues and notify listeners
+            if (taskManager != null) {
+                taskManager.clearAllTasks();
+            }
+
+            // Reset robots to idle and full battery
+            if (warehouse != null) {
+                for (robots.Robot r : warehouse.getRobots()) {
+                    try { r.resetToIdle(warehouse.getIdleLocation()); } catch (Throwable ignore) {}
+                }
+                // release charging stations and clear queue
+                for (charging.ChargingStation s : warehouse.getStations()) {
+                    try { s.release(); } catch (Throwable ignore) {}
+                }
+                try { warehouse.clearChargingQueue(); } catch (Throwable ignore) {}
+            }
+
             // Clear persisted orders
             OrdersStore ordersStore = OrdersStore.getInstance();
             ordersStore.getOrders().clear();

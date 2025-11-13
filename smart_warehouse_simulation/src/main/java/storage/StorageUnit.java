@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.awt.Point;
 import exceptions.ExceptionHandler;
+import logging.LogManager;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class StorageUnit implements Serializable {
 
@@ -14,12 +18,19 @@ public class StorageUnit implements Serializable {
     private double capacity;
     private Point position;
     private List<Item> items;
+    private transient LogManager logManager;
+    private static final DateTimeFormatter DF = DateTimeFormatter.ISO_DATE;
 
     public StorageUnit(String id, double capacity , Point position){
         this.id = id;
         this.capacity = capacity;
         this.position = position;
         this.items = new ArrayList<>();
+        try {
+            this.logManager = logging.LogManager.getInstance("logs");
+        } catch (Exception e) {
+            this.logManager = null;
+        }
     }
     public String getId(){
         return id;
@@ -38,6 +49,16 @@ public class StorageUnit implements Serializable {
         try {
             if( items.size() < capacity){
                 items.add(item);
+                // Log inventory addition (ensure logManager initialized after deserialization)
+                try {
+                    if (this.logManager == null) this.logManager = logging.LogManager.getInstance("logs");
+                } catch (Throwable ignore) {}
+                if (logManager != null) {
+                    String date = DF.format(LocalDate.now());
+                    String fileName = String.format("InventoryLogs/%s-%s.log", this.id, date);
+                    String msg = String.format("[%s] Item added to StorageUnit %s: %s", LocalDateTime.now(), this.id, item.toString());
+                    logManager.writeLog(fileName, msg);
+                }
                 return true;
             }
         } catch (Throwable t) {

@@ -18,10 +18,14 @@ public class Warehouse {
     private TaskManager taskManager;
     private List<Robot> robots;
     private List<ChargingStation> stations;
+    private utils.PathFinder pathFinder;
     private List<Thread> robotThreads = new ArrayList<>();
     private boolean simulationRunning = false;
     private Random random = new Random();
     private Queue<Robot> chargingQueue = new LinkedList<>();
+    private Point idleLocation;
+    private Point dropOffLocation;
+    private Point chargingLocation;
     
     public Warehouse() {
 
@@ -36,8 +40,12 @@ public class Warehouse {
         stations = new ArrayList<>();
 
 
-        createStations();
-        createRobots();
+    this.pathFinder = new utils.PathFinder(grid);
+    this.dropOffLocation = new Point(1,1);
+    this.idleLocation = new Point(3,1);
+    this.chargingLocation = new Point(2,1);
+    createStations();
+    createRobots();
         
     }
 
@@ -51,33 +59,41 @@ public class Warehouse {
         robots = new ArrayList<>();
         stations = new ArrayList<>();
 
+        // initialize pathfinder and fixed locations so stations/robots get valid points
+        this.pathFinder = new utils.PathFinder(grid);
+        this.dropOffLocation = new Point(1,1);
+        this.idleLocation = new Point(3,1);
+    this.chargingLocation = new Point(2,1);
+
         createStations();
         createRobots();
     }
     
     private void createStations() {
-        
-        ChargingStation station1 = new ChargingStation(new Point(0, 9)); 
-        ChargingStation station2 = new ChargingStation(new Point(9, 9)); 
-        
+        ChargingStation station1 = new ChargingStation(this.chargingLocation);
+        ChargingStation station2 = new ChargingStation(this.chargingLocation);
+
         stations.add(station1);
         stations.add(station2);
-        
+
         grid.placeObject(station1, station1.getLocation());
         grid.placeObject(station2, station2.getLocation());
         
     }
     
     private void createRobots() {
-        // Create 5 fixed robots with base positions. These are static for now
-        // so we can later attach charging stations to their areas.
-        robots.add(new Robot(this, new Point(0, 0), taskManager));
-        robots.add(new Robot(this, new Point(2, 0), taskManager));
-        robots.add(new Robot(this, new Point(4, 0), taskManager));
-        robots.add(new Robot(this, new Point(6, 0), taskManager));
-        robots.add(new Robot(this, new Point(8, 0), taskManager));
-        
+        // create 5 fixed robots all starting at the idle/base location
+        for (int i = 0; i < 5; i++) {
+            Robot r = new Robot(this, new Point(idleLocation.x, idleLocation.y), taskManager, pathFinder);
+            robots.add(r);
+            try { grid.placeObject(r, r.getLocation()); } catch (Throwable ignore) {}
+        }
+
     }
+
+    public Point getIdleLocation() { return this.idleLocation; }
+    public Point getDropOffLocation() { return this.dropOffLocation; }
+    public Point getChargingLocation() { return this.chargingLocation; }
 
 
     
@@ -115,13 +131,38 @@ public class Warehouse {
 
     public synchronized void releaseStation(ChargingStation station) {
         if (!chargingQueue.isEmpty()) {
-            Robot waitingRobot = chargingQueue.poll();
-            // occupy the station for this waiting robot and assign
-            station.occupy(waitingRobot);
-            waitingRobot.assignStation(station);
+            // find the first robot in the queue that is still waiting-for-charge
+            Robot toAssign = null;
+            for (Robot candidate : chargingQueue) {
+                if (candidate == null) continue;
+                try {
+                    if (candidate.getState() == Robot.RobotState.WAITING_FOR_CHARGE) {
+                        // try to assign; assignStation will return true only if the robot still wants it
+                        if (candidate.assignStation(station)) {
+                            toAssign = candidate;
+                            break;
+                        }
+                    }
+                } catch (Throwable ignore) {
+                    // ignore and continue
+                }
+            }
+            if (toAssign != null) {
+                // remove only the selected robot from the queue and occupy
+                chargingQueue.remove(toAssign);
+                station.occupy(toAssign);
+            } else {
+                // no valid waiting robot found -> release station
+                station.release();
+            }
         } else {
             station.release();
         }
+    }
+    
+    /** Clear the charging queue (used when flushing data). */
+    public synchronized void clearChargingQueue() {
+        chargingQueue.clear();
     }
     
     public void startSimulation() {
@@ -188,9 +229,9 @@ public class Warehouse {
         grid.placeObject(station3, station3.getLocation());
         grid.placeObject(station4, station3.getLocation());
 
-        Robot robot3 = new Robot(this, new Point(5, 5), taskManager);
-        Robot robot4 = new Robot(this, new Point(0, 5), taskManager);
-        Robot robot5 = new Robot(this, new Point(1, 5), taskManager);
+    Robot robot3 = new Robot(this, new Point(5, 5), taskManager, pathFinder);
+    Robot robot4 = new Robot(this, new Point(0, 5), taskManager, pathFinder);
+    Robot robot5 = new Robot(this, new Point(1, 5), taskManager, pathFinder);
 
         robots.add(robot3);
         robots.add(robot4);
@@ -210,9 +251,9 @@ public class Warehouse {
 
     public void task2_simulation(){
 
-        Robot robot3 = new Robot(this, new Point(5, 5), taskManager);
-        Robot robot4 = new Robot(this, new Point(0, 5), taskManager);
-        Robot robot5 = new Robot(this, new Point(1, 5), taskManager);
+    Robot robot3 = new Robot(this, new Point(5, 5), taskManager, pathFinder);
+    Robot robot4 = new Robot(this, new Point(0, 5), taskManager, pathFinder);
+    Robot robot5 = new Robot(this, new Point(1, 5), taskManager, pathFinder);
 
         robots.add(robot3);
         robots.add(robot4);

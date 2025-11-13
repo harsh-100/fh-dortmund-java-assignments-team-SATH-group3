@@ -39,12 +39,12 @@ public class ExceptionHandler {
         // Write to system daily log when possible. Guard against any exceptions here.
         if (logManager != null) {
             try {
-                String fileName = String.format("SYSTEM-%s.log", LocalDate.now());
-                logManager.writeLog(fileName, header);
+                    String fileName = String.format("SystemLogs/SYSTEM-%s.log", LocalDate.now());
+                    logManager.writeLog(fileName, header);
 
-                StringWriter sw = new StringWriter();
-                t.printStackTrace(new PrintWriter(sw));
-                logManager.writeLog(fileName, sw.toString());
+                    StringWriter sw = new StringWriter();
+                    t.printStackTrace(new PrintWriter(sw));
+                    logManager.writeLog(fileName, sw.toString());
                 // Also store exception in the in-memory ExceptionStore for UI consumption
                 try {
                     exceptions.ExceptionStore.ExceptionRecord rec = new exceptions.ExceptionStore.ExceptionRecord(ts, context, msg, sw.toString());

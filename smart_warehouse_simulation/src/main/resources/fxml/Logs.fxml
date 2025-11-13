@@ -17,22 +17,13 @@
             <Label text="Log file:" />
             <ComboBox fx:id="logFileCombo" prefWidth="300" />
             <Button text="Refresh" onAction="#onRefresh" />
-            <CheckBox fx:id="autoRefresh" text="Auto-refresh" />
         </HBox>
     </top>
 
     <center>
-        <SplitPane dividerPositions="0.7">
-            <VBox>
-                <Label text="Tail" style="-fx-font-weight:bold" />
-                <TextArea fx:id="logsArea" prefRowCount="20" editable="false" wrapText="true" />
-            </VBox>
-            <VBox>
-                <Label text="Exceptions" style="-fx-font-weight:bold" />
-                <ListView fx:id="exceptionsList" prefHeight="200" />
-                <Label text="Stacktrace" style="-fx-font-weight:bold" />
-                <TextArea fx:id="stacktraceArea" prefRowCount="10" editable="false" wrapText="true" />
-            </VBox>
-        </SplitPane>
+        <VBox>
+            <Label text="Tail" style="-fx-font-weight:bold" />
+            <TextArea fx:id="logsArea" prefRowCount="20" editable="false" wrapText="true" />
+        </VBox>
     </center>
 </BorderPane>

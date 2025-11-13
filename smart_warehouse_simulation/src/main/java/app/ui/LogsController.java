@@ -1,7 +1,6 @@
 package app.ui;
 
-import exceptions.ExceptionStore;
-import exceptions.ExceptionStore.ExceptionRecord;
+// exceptions UI removed; no exception store wiring required here
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -10,7 +9,6 @@ import javafx.scene.control.*;
 import javafx.util.Duration;
 import logging.LogService;
 
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -21,15 +19,6 @@ public class LogsController {
 
     @FXML
     private TextArea logsArea;
-
-    @FXML
-    private CheckBox autoRefresh;
-
-    @FXML
-    private ListView<ExceptionRecord> exceptionsList;
-
-    @FXML
-    private TextArea stacktraceArea;
 
     private final LogService logService = new LogService("logs");
     private Timeline refresher;
@@ -47,19 +36,8 @@ public class LogsController {
 
         logFileCombo.setOnAction(evt -> refreshLogs());
 
-        // exceptions list
-        exceptionsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
-            if (newV == null) stacktraceArea.clear();
-            else stacktraceArea.setText(newV.stacktrace);
-        });
-
-        loadExceptions();
-
-        // auto-refresh timeline
-        refresher = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            if (autoRefresh.isSelected()) refreshLogs();
-            loadExceptions();
-        }));
+        // auto-refresh timeline: periodically refresh logs
+        refresher = new Timeline(new KeyFrame(Duration.seconds(1), e -> refreshLogs()));
         refresher.setCycleCount(Timeline.INDEFINITE);
         refresher.play();
 
@@ -71,27 +49,17 @@ public class LogsController {
             logging.LogManager.getInstance().addListener((fileName, line) -> {
                 String selected = logFileCombo.getSelectionModel().getSelectedItem();
                 if (selected != null && selected.equals(fileName)) {
-                    Platform.runLater(() -> {
-                        logsArea.appendText(line + "\n");
-                    });
+                    Platform.runLater(() -> logsArea.appendText(line + "\n"));
                 }
             });
-        } catch (Throwable ignore) {
-        }
+        } catch (Throwable ignore) {}
     }
 
     @FXML
     public void onRefresh() {
         refreshLogs();
-        loadExceptions();
     }
 
-    private void loadExceptions() {
-        List<ExceptionRecord> recs = ExceptionStore.getInstance().recent(200);
-        Platform.runLater(() -> {
-            exceptionsList.getItems().setAll(recs);
-        });
-    }
 
     private void refreshLogs() {
         String sel = logFileCombo.getSelectionModel().getSelectedItem();

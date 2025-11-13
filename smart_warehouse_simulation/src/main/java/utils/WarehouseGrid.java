@@ -13,8 +13,21 @@ public class WarehouseGrid {
         this.gridLayout = new Object[rows][columns];
     }
     
-    private boolean isWithinBounds(int row, int column) {
+    public boolean isWithinBounds(int row, int column) {
         return row >= 0 && row < this.rows && column >= 0 && column < this.columns;
+    }
+
+    /**
+     * Return true if the cell at the given coordinates is inside the grid and currently free (no object).
+     */
+    public boolean isLocationFree(int row, int column) {
+        if (!isWithinBounds(row, column)) return false;
+        return this.gridLayout[row][column] == null;
+    }
+
+    public boolean isLocationFree(Point p) {
+        if (p == null) return false;
+        return isLocationFree(p.x, p.y);
     }
     
     //-------- place object methods --------------

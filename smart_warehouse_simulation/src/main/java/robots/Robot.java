@@ -5,7 +5,10 @@ import tasks.TaskManager;
 import tasks.Tasks;
 import java.awt.Point;
 import charging.ChargingStation;
+import utils.PathFinder;
 import warehouse.Warehouse;
+import java.util.LinkedList;
+import java.util.Queue;
 import logging.LogManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,7 +28,13 @@ public class Robot implements Runnable, IGridEntity  {
         IDLE,
         WORKING,
         CHARGING,
-        WAITING_FOR_CHARGE
+        WAITING_FOR_CHARGE,
+        MOVING_TO_CHARGE,
+        MOVING_TO_IDLE_POINT
+    }
+    private enum WorkingState {
+        GOING_TO_PICKUP,
+        GOING_TO_DROPOFF
     }
     
     private RobotState state;
@@ -33,6 +42,11 @@ public class Robot implements Runnable, IGridEntity  {
     private ChargingStation currentStation;
     public Warehouse warehouse;
     private final DateTimeFormatter df = DateTimeFormatter.ISO_DATE;
+    private PathFinder pathFinder;
+    private Queue<Point> currentPath;
+    private Point dropOffLocation;
+    private Point robotsCamp;
+    private WorkingState workingState;
     
     // ----------------------------------
     private int taskTimer = 0; // just a temporary solution
@@ -53,9 +67,10 @@ public class Robot implements Runnable, IGridEntity  {
     // charging lasts ~10s as well (100 ticks × 100ms)
     private static final int CHARGING_DURATION_IN_TICKS = 100;
     private static final double BATTERY_COST_PER_TICK = 0.5;
-    private static final int TICK_DELAY_MS = 100;
+    // Use 1000ms tick so movement/battery updates are visible in the UI (~1s per step)
+    private static final int TICK_DELAY_MS = 1000;
     
-    public Robot(Warehouse warehouse, Point currentPosition, TaskManager taskManager) {
+    public Robot(Warehouse warehouse, Point currentPosition, TaskManager taskManager, PathFinder pathFinder) {
         this.id = "robot_" + num;
         num++;
         this.currentPosition = currentPosition;
@@ -63,6 +78,10 @@ public class Robot implements Runnable, IGridEntity  {
         this.state = RobotState.IDLE;
         this.taskManager = taskManager;
         this.warehouse = warehouse;
+        this.pathFinder = pathFinder;
+        this.currentPath = new LinkedList<>();
+        this.dropOffLocation = warehouse.getDropOffLocation();
+        this.robotsCamp = warehouse.getIdleLocation();
         
         try {
             this.logManager = logging.LogManager.getInstance("logs");
@@ -96,7 +115,7 @@ public class Robot implements Runnable, IGridEntity  {
 
         if (logManager != null) {
             String date = df.format(LocalDate.now());
-            fileName = String.format("RobotsLogs/%s-%s.log", this.getID(), date);
+            fileName = String.format("RobotLogs/%s-%s.log", this.getID(), date);
         }
 
 
@@ -114,68 +133,81 @@ public class Robot implements Runnable, IGridEntity  {
         
         
         
-    else if (batteryLevel < LOW_BATTERY_THRESHOLD
-        && state != RobotState.CHARGING
-        && state != RobotState.WORKING) {
-            
+        else if (batteryLevel < LOW_BATTERY_THRESHOLD
+                && state != RobotState.CHARGING
+                && state != RobotState.MOVING_TO_CHARGE
+                && state != RobotState.WAITING_FOR_CHARGE) {
+
             if (this.currentTask != null) {
                 taskManager.requeueTask(this.currentTask);
                 this.currentTask = null;
-                this.taskTimer = 0; 
             }
-            
-            ChargingStation station = warehouse.requestCharging(this); // just a plug
-            
-            if (station != null) {
-                this.state = RobotState.CHARGING;
-                this.chargeTimer = 0;
-                this.currentStation = station;
-                this.currentStation.occupy(this);
-                this.currentPosition = station.getLocation();
 
+            ChargingStation station = warehouse.requestCharging(this);
+            if (station != null) {
+                this.currentStation = station;
+                this.state = RobotState.MOVING_TO_CHARGE;
+                this.currentPath = pathFinder.findPath(this.currentPosition, station.getLocation());
                 if (fileName != null) {
-                    String msg = String.format("[%s] Robot %s is charging at %s", LocalDateTime.now(), this.getID(), this.currentStation.getID());
+                    String msg = String.format("[%s] Robot %s starts moving to the charging station %s", LocalDateTime.now(), this.getID(), this.currentStation.getID());
                     logManager.writeLog(fileName, msg);
                 }
-
             } else {
                 this.state = RobotState.WAITING_FOR_CHARGE;
                 if (fileName != null) {
                     String msg = String.format("[%s] Robot %s is in the charging queue", LocalDateTime.now(), this.getID());
                     logManager.writeLog(fileName, msg);
                 }
-                this.waitingStartTime = System.currentTimeMillis(); // Start of the timer for queue
+                this.waitingStartTime = System.currentTimeMillis();
             }
         }
 
-        else if (state == RobotState.IDLE && batteryLevel > LOW_BATTERY_THRESHOLD) {
-            // nothing special here; robot will attempt to get new task in performAction()
-        }
-        
-   
-        
-//     else if (state == RobotState.CHARGING && chargeTimer >= CHARGING_DURATION_IN_TICKS) {
-        else if (state == RobotState.CHARGING && this.chargeTimer >= CHARGING_DURATION_IN_TICKS) {
-            // charging finished after configured ticks
-            this.batteryLevel = MAX_BATTERY;
-            this.state = RobotState.IDLE;
+        else if (state == RobotState.MOVING_TO_CHARGE && (currentPath == null || currentPath.isEmpty())){
+            this.state = RobotState.CHARGING;
             this.chargeTimer = 0;
+        }
 
+        else if (state == RobotState.CHARGING && this.chargeTimer >= CHARGING_DURATION_IN_TICKS) {
+            this.batteryLevel = MAX_BATTERY;
+            this.chargeTimer = 0;
             if (this.currentStation != null) {
                 warehouse.releaseStation(this.currentStation);
                 this.currentStation = null;
             }
+            this.state = RobotState.MOVING_TO_IDLE_POINT;
+            this.currentPath = pathFinder.findPath(this.currentPosition, warehouse.getIdleLocation());
         }
-        
-        else if (state == RobotState.WORKING && taskTimer >= TASK_DURATION_IN_TICKS) {
-            // task finished: notify TaskManager, reduce battery and become idle
-            taskManager.completeTask(this.currentTask);
-            // reduce battery by 20% upon task completion
-            this.batteryLevel -= 20.0;
-            if (this.batteryLevel < 0) this.batteryLevel = 0;
-            this.currentTask = null;
+
+        else if (state == RobotState.MOVING_TO_IDLE_POINT && (currentPath == null || currentPath.isEmpty())){
             this.state = RobotState.IDLE;
-            this.taskTimer = 0;
+            try { this.currentPosition = warehouse.getIdleLocation(); } catch (Throwable ignore) {}
+            if (fileName != null) {
+                String msg = String.format("[%s] Robot %s is at IDLE point and ready to get new tasks (battery=%.1f)", LocalDateTime.now(), this.getID(), this.batteryLevel);
+                logManager.writeLog(fileName, msg);
+            }
+        }
+
+        else if (state == RobotState.WORKING && (currentPath == null || currentPath.isEmpty())) {
+            if (this.workingState == WorkingState.GOING_TO_PICKUP) {
+                this.workingState = WorkingState.GOING_TO_DROPOFF;
+                this.currentPath = pathFinder.findPath(this.currentPosition, this.dropOffLocation);
+                if (this.currentPath == null) {
+                    // cannot reach drop-off — requeue task and go idle
+                    System.out.println("PATH NOT FOUND for drop-off of task " + (this.currentTask != null ? this.currentTask.getId() : "-"));
+                    try { taskManager.requeueTask(this.currentTask); } catch (Throwable ignore) {}
+                    this.currentTask = null;
+                    this.state = RobotState.IDLE;
+                    return;
+                }
+            } else {
+                if (this.currentTask != null) {
+                    try { this.currentPosition = this.dropOffLocation; } catch (Throwable ignore) {}
+                    taskManager.completeTask(this.currentTask);
+                    this.currentTask = null;
+                }
+                this.state = RobotState.MOVING_TO_IDLE_POINT;
+                this.currentPath = pathFinder.findPath(this.currentPosition, warehouse.getIdleLocation());
+            }
         }
         
         
@@ -187,10 +219,10 @@ public class Robot implements Runnable, IGridEntity  {
         
         if (logManager != null) {
             String date = df.format(LocalDate.now());
-            fileName = String.format("RobotsLogs/%s-%s.log", this.getID(), date);
+            fileName = String.format("RobotLogs/%s-%s.log", this.getID(), date);
         }
         
-        switch (this.state) {
+    switch (this.state) {
         case IDLE:
             // Try to obtain a task. If a task is obtained, log it. Otherwise
             // only log IDLE when the state actually changed to avoid flooding logs.
@@ -220,6 +252,24 @@ public class Robot implements Runnable, IGridEntity  {
             }
             break;
 
+        case MOVING_TO_CHARGE:
+            workOnTask();
+            if (fileName != null && lastLoggedState != RobotState.MOVING_TO_CHARGE) {
+                String msg = String.format("[%s] Robot %s moving to charge (battery=%.1f)", LocalDateTime.now(), this.getID(), this.batteryLevel);
+                logManager.writeLog(fileName, msg);
+                lastLoggedState = RobotState.MOVING_TO_CHARGE;
+            }
+            break;
+
+        case MOVING_TO_IDLE_POINT:
+            workOnTask();
+            if (fileName != null && lastLoggedState != RobotState.MOVING_TO_IDLE_POINT) {
+                String msg = String.format("[%s] Robot %s moving to idle (battery=%.1f)", LocalDateTime.now(), this.getID(), this.batteryLevel);
+                logManager.writeLog(fileName, msg);
+                lastLoggedState = RobotState.MOVING_TO_IDLE_POINT;
+            }
+            break;
+
         case CHARGING:
             chargeBattery();
             if (fileName != null && lastLoggedState != RobotState.CHARGING) {
@@ -241,10 +291,18 @@ public class Robot implements Runnable, IGridEntity  {
     }
     
     private void workOnTask() {
-        this.taskTimer++;
-        this.batteryLevel -= BATTERY_COST_PER_TICK;
-        if (this.batteryLevel < 0)
-            this.batteryLevel = 0; // exception in the future
+        // step along current path if available
+        if (currentPath != null && !currentPath.isEmpty()) {
+            this.currentPosition = currentPath.poll();
+            this.batteryLevel -= BATTERY_COST_PER_MOVE;
+            if (this.batteryLevel < 0) this.batteryLevel = 0;
+            if (logManager != null) {
+                String date = df.format(LocalDate.now());
+                String fileName = String.format("RobotLogs/%s-%s.log", this.getID(), date);
+                String msg = String.format("[%s] Robot %s moved to %s (battery=%.1f)", LocalDateTime.now(), this.getID(), this.currentPosition.toString(), this.batteryLevel);
+                logManager.writeLog(fileName, msg);
+            }
+        }
     }
     
     private void chargeBattery() {
@@ -255,15 +313,23 @@ public class Robot implements Runnable, IGridEntity  {
     }
     
     private void tryToGetNewTask() {
-        Tasks newTask = taskManager.robotGetTask();
+        Tasks newTask = taskManager.robotGetTask(this.id, this.currentPosition, this.batteryLevel);
         if (newTask != null) {
             this.currentTask = newTask;
-            try { this.currentTask.setRobotId(this.getID()); } catch (Throwable ignore) {}
-            try { this.currentTask.setStatus(Tasks.TaskStatus.IN_PROGRESS); } catch (Throwable ignore) {}
             this.state = RobotState.WORKING;
-            this.taskTimer = 0;
+            this.workingState = WorkingState.GOING_TO_PICKUP;
+            this.currentPath = pathFinder.findPath(this.currentPosition, newTask.getDestination());
+            if (this.currentPath == null) {
+                // requeue the task so others can try; avoid leaving it in active/picked state
+                System.out.println("PATH NOT FOUND for task " + newTask.getId());
+                try {
+                    taskManager.requeueTask(newTask);
+                } catch (Throwable ignore) {}
+                this.currentTask = null;
+                this.state = RobotState.IDLE;
+            }
         }
-        
+
     }
 
     public void assignStation(ChargingStation station) {
@@ -313,6 +379,23 @@ public class Robot implements Runnable, IGridEntity  {
     
     public void setTaskTimerForTest(int t) {
         this.taskTimer = t;
+    }
+
+    /**
+     * Reset robot to idle position and full battery. Intended for UI/debug flush operations.
+     */
+    public void resetToIdle(java.awt.Point idle) {
+        try {
+            this.currentTask = null;
+            this.currentPath.clear();
+            this.currentStation = null;
+            this.chargeTimer = 0;
+            this.state = RobotState.IDLE;
+            this.batteryLevel = MAX_BATTERY;
+            if (idle != null) {
+                this.currentPosition = new java.awt.Point(idle.x, idle.y);
+            }
+        } catch (Throwable ignore) {}
     }
     
 }

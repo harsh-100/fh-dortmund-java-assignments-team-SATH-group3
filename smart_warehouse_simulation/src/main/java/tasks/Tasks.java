@@ -27,6 +27,7 @@ public class Tasks{
         FAILED
     }
     private TaskStatus status;
+    private int attempts = 0;
 
     public Tasks(String id, Point destination, Item item){
         try {
@@ -106,6 +107,9 @@ public class Tasks{
     public boolean isComplete(){
         return status == TaskStatus.COMPLETED;
     }
+
+    public int getAttempts() { return attempts; }
+    public void incrementAttempts() { this.attempts++; }
 
     @Override
     public String toString(){

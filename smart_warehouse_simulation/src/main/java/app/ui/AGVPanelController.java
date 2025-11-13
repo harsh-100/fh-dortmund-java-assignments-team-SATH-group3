@@ -26,6 +26,9 @@ public class AGVPanelController {
     private ListView<String> robotListView;
 
     @FXML
+    private Label robotsHeadingLabel;
+
+    @FXML
     private ListView<String> stationsListView;
 
     @FXML
@@ -111,8 +114,16 @@ public class AGVPanelController {
                 List<Robot> robots = warehouse.getRobots();
                 ObservableList<String> items = robotListView.getItems();
                 items.clear();
+                // set robots heading once (shows warehouse base and drop-off points)
+                try {
+                    String base = String.format("(%d,%d)", warehouse.getIdleLocation().x, warehouse.getIdleLocation().y);
+                    String drop = String.format("(%d,%d)", warehouse.getDropOffLocation().x, warehouse.getDropOffLocation().y);
+                    robotsHeadingLabel.setText(String.format("Robots (base=%s, drop=%s):", base, drop));
+                } catch (Exception ignored) {}
+
                 for (Robot r : robots) {
                     String taskId = (r.getCurrentTask() != null) ? r.getCurrentTask().getId() : "-";
+                    // per-row: show id, state, battery, position and current task
                     String s = String.format("%s | %s | batt=%.1f | pos=(%d,%d) | task=%s",
                             r.getID(), r.getState(), r.getBattery(), r.getLocation().x, r.getLocation().y, taskId);
                     items.add(s);

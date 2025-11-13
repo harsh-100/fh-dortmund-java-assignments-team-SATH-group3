@@ -32,7 +32,7 @@
             <Label fx:id="scenarioStatusLabel" text="Scenario: idle" />
             <Label fx:id="pendingTasksLabel" text="Pending tasks: 0" />
             <Label fx:id="completedTasksLabel" text="Completed tasks: 0" />
-            <Label text="Robots:" style="-fx-font-weight:bold" />
+            <Label fx:id="robotsHeadingLabel" text="Robots:" style="-fx-font-weight:bold" />
             <?import javafx.scene.control.ListView?>
             <ListView fx:id="robotListView" prefHeight="300" />
         </VBox>

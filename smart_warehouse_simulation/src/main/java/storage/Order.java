@@ -4,6 +4,10 @@ import exceptions.ExceptionHandler;
 import java.io.Serializable;
 import java.util.List;
 import java.util.ArrayList;
+import logging.LogManager;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 //This class will represents the Order by the customer
 public class Order implements Serializable{
@@ -18,12 +22,26 @@ public class Order implements Serializable{
     private Status status;
     private List<Item> items;
     private long timestamp;
+    private transient LogManager logManager;
+    private static final DateTimeFormatter DF = DateTimeFormatter.ISO_DATE;
 
     public Order(String id) {
         this.id = id;
         this.status = Status.PENDING;
         this.items = new ArrayList<>();
         this.timestamp = System.currentTimeMillis();
+        try {
+            this.logManager = logging.LogManager.getInstance("logs");
+            // log creation (write into a per-day orders file)
+            if (logManager != null) {
+                String date = DF.format(LocalDate.now());
+                String fileName = String.format("OrderLogs/Orders-%s.log", date);
+                String msg = String.format("[%s] Order %s created (status=%s)", LocalDateTime.now(), this.id, this.status);
+                logManager.writeLog(fileName, msg);
+            }
+        } catch (Exception e) {
+            this.logManager = null;
+        }
     }
 
     public String getId() {
@@ -45,6 +63,13 @@ public class Order implements Serializable{
     public void addItem(Item item) {
         try {
             items.add(item);
+            try { if (this.logManager == null) this.logManager = logging.LogManager.getInstance("logs"); } catch (Throwable ignore) {}
+            if (logManager != null) {
+                String date = DF.format(LocalDate.now());
+                String fileName = String.format("OrderLogs/Orders-%s.log", date);
+                String msg = String.format("[%s] Item %s added to Order %s", LocalDateTime.now(), item.toString(), this.id);
+                logManager.writeLog(fileName, msg);
+            }
         } catch (Throwable t) {
             ExceptionHandler.handle(t, "storage.Order.addItem");
         }
@@ -59,7 +84,19 @@ public class Order implements Serializable{
     }
 
     public void setStatus(Status status) {
-        this.status = status;
+        try {
+            Status prev = this.status;
+            this.status = status;
+            try { if (this.logManager == null) this.logManager = logging.LogManager.getInstance("logs"); } catch (Throwable ignore) {}
+            if (logManager != null) {
+                String date = DF.format(LocalDate.now());
+                String fileName = String.format("OrderLogs/Orders-%s.log", date);
+                String msg = String.format("[%s] Order %s status changed: %s -> %s", LocalDateTime.now(), this.id, prev, status);
+                logManager.writeLog(fileName, msg);
+            }
+        } catch (Throwable t) {
+            ExceptionHandler.handle(t, "storage.Order.setStatus");
+        }
     }
     @Override
     public String toString() {
